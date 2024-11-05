@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import Colors from '../constants/Colors';
 
 function CafeCard({ cafe, onPress }) {
   return (
@@ -17,37 +18,38 @@ function CafeCard({ cafe, onPress }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+    card: {
+      backgroundColor: Colors.background,
+      borderRadius: 8,
+      padding: 16,
+      marginVertical: 8,
+      shadowColor: Colors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  content: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  rating: {
-    fontSize: 16,
-    color: '#FFD700',
-    marginBottom: 4,
-  },
-  address: {
-    fontSize: 14,
-    color: '#666',
-  },
-});
+    content: {
+      flex: 1,
+    },
+    name: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 4,
+      color: Colors.textPrimary,
+    },
+    rating: {
+      fontSize: 16,
+      color: Colors.rating,
+      marginBottom: 4,
+    },
+    address: {
+      fontSize: 14,
+      color: Colors.textSecondary,
+    },
+  });
 
 export default CafeCard;

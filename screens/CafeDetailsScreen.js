@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import Colors from '../constants/Colors';
 
-function CafeDetailsScreen({ route }) {
+const CafeDetailsScreen = ({ route }) => {
   const mockCafeDetails = {
     name: 'Sample Cafe',
     rating: 4.5,
@@ -45,37 +46,39 @@ function CafeDetailsScreen({ route }) {
       </View>
     </ScrollView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background,
   },
   header: {
     padding: 16,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: Colors.border,
   },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: Colors.textPrimary,
   },
   rating: {
     fontSize: 18,
-    color: '#FFD700',
+    color: Colors.rating,
   },
   section: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: Colors.border,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: Colors.primary,
   },
 });
 
