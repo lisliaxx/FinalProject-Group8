@@ -23,6 +23,17 @@ const AddReviewScreen = ({ navigation, route }) => {
   const { addReview } = useReviews();
 
   const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Needed',
+        'Please grant camera roll permissions to add photos to your review.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -31,11 +42,15 @@ const AddReviewScreen = ({ navigation, route }) => {
         quality: 1,
       });
 
-      if (!result.canceled) {
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         setImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
+      Alert.alert(
+        'Error',
+        'Failed to pick image. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -51,7 +66,7 @@ const AddReviewScreen = ({ navigation, route }) => {
     }
 
     const newReview = {
-      id: Date.now(),
+      id: Date.now().toString(), 
       author: 'You',
       rating: rating,
       date: new Date().toLocaleDateString('en-US', {
@@ -60,13 +75,13 @@ const AddReviewScreen = ({ navigation, route }) => {
         year: 'numeric'
       }),
       content: review.trim(),
-      photoUrl: image
+      photoUrl: image,
+      cafeId: cafeId 
     };
 
     addReview(cafeId, newReview);
     navigation.goBack();
   };
-
   return (
     <ScrollView style={styles.container}>
       {/* Rating Section */}

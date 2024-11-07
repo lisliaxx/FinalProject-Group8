@@ -15,7 +15,10 @@ const ReviewItem = ({ review }) => (
           <Text style={styles.date}>{review.date}</Text>
         </View>
       </View>
-      <Text style={styles.reviewRating}>{'★'.repeat(review.rating)}</Text>
+      <View style={styles.ratingContainer}>
+        <Text style={styles.reviewRating}>{'★'.repeat(review.rating)}</Text>
+        <Text style={styles.unfilledStars}>{'★'.repeat(5 - review.rating)}</Text>
+      </View>
     </View>
     <Text style={styles.reviewText}>{review.content}</Text>
     {review.photoUrl && (
@@ -30,12 +33,14 @@ const ReviewItem = ({ review }) => (
 
 const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId } = useReviews();
-  const cafeId = route?.params?.id || 'sample-cafe';
-  const reviews = getReviewsByCafeId(cafeId);
+  const cafeId = route.params?.id || 'default-cafe';
+  const cafeReviews = getReviewsByCafeId(cafeId);
+  const averageRating = cafeReviews.length > 0
+    ? (cafeReviews.reduce((sum, review) => sum + review.rating, 0) / cafeReviews.length).toFixed(1)
+    : 0;
 
   const mockCafeDetails = {
     name: 'Sample Cafe',
-    rating: 4.5,
     address: '123 Coffee Street',
     hours: '8:00 AM - 8:00 PM',
     features: {
@@ -45,12 +50,14 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       hasWifi: true
     }
   };
-
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.name}>{mockCafeDetails.name}</Text>
-        <Text style={styles.rating}>★ {mockCafeDetails.rating}</Text>
+        <View style={styles.ratingRow}>
+          <Text style={styles.rating}>★ {averageRating}</Text>
+          <Text style={styles.reviewCount}>({cafeReviews.length} reviews)</Text>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -89,9 +96,15 @@ const CafeDetailsScreen = ({ route, navigation }) => {
         
         {/* Reviews List */}
         <View style={styles.reviewsList}>
-          {reviews.map((review) => (
-            <ReviewItem key={review.id} review={review} />
-          ))}
+          {cafeReviews.length > 0 ? (
+            cafeReviews.map((review) => (
+              <ReviewItem key={review.id} review={review} />
+            ))
+          ) : (
+            <Text style={styles.noReviewsText}>
+              No reviews yet. Be the first to review!
+            </Text>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -211,6 +224,25 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     borderRadius: 8,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewCount: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  noReviewsText: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: 16,
+    padding: 20,
+  },
+  unfilledStars: {
+    color: Colors.border,
+    fontSize: 16,
   },
 });
 
