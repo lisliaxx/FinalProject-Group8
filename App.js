@@ -34,28 +34,13 @@ const MapStackNavigator = () => {
       <Stack.Screen 
         name="CafeDetails"
         component={CafeDetailsScreen}
-        options={({ navigation, route }) => ({
+        options={{
           title: 'Cafe Details',
           headerStyle: {
             backgroundColor: Colors.primary,
           },
           headerTintColor: Colors.textLight,
-          headerRight: () => (
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={() => {
-                // Access the showScheduleModal function through route params
-                route.params?.showScheduleModal?.();
-              }}
-            >
-              <Ionicons 
-                name="calendar-outline" 
-                size={24} 
-                color={Colors.textLight}
-              />
-            </TouchableOpacity>
-          ),
-        })}
+        }}
       />
       <Stack.Screen 
         name="AddReview"
@@ -90,27 +75,13 @@ const FavoritesStackNavigator = () => {
       <Stack.Screen 
         name="CafeDetails"
         component={CafeDetailsScreen}
-        options={({ navigation, route }) => ({
+        options={{
           title: 'Cafe Details',
           headerStyle: {
             backgroundColor: Colors.primary,
           },
           headerTintColor: Colors.textLight,
-          headerRight: () => (
-            <TouchableOpacity 
-              style={styles.headerButton}
-              onPress={() => {
-                route.params?.showScheduleModal?.();
-              }}
-            >
-              <Ionicons 
-                name="calendar-outline" 
-                size={24} 
-                color={Colors.textLight}
-              />
-            </TouchableOpacity>
-          ),
-        })}
+        }}
       />
       <Stack.Screen 
         name="AddReview"
@@ -179,15 +150,15 @@ const styles = StyleSheet.create({
 
 const App = () => {
   return (
-    <ScheduleProvider>
-      <FavoritesProvider>
-        <ReviewProvider>
-          <NavigationContainer>
+    <NavigationContainer>
+      <ScheduleProvider>
+        <FavoritesProvider>
+          <ReviewProvider>
             <TabNavigator />
-          </NavigationContainer>
-        </ReviewProvider>
-      </FavoritesProvider>
-    </ScheduleProvider>
+          </ReviewProvider>
+        </FavoritesProvider>
+      </ScheduleProvider>
+    </NavigationContainer>
   );
 };
 

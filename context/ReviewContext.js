@@ -3,25 +3,37 @@ import React, { createContext, useState, useContext } from 'react';
 const ReviewContext = createContext();
 
 export const ReviewProvider = ({ children }) => {
-  // Store reviews as an object with cafeId as keys
   const [reviews, setReviews] = useState({});
 
   const addReview = (cafeId, review) => {
-    if (!cafeId) return; 
-
     setReviews(prevReviews => ({
       ...prevReviews,
       [cafeId]: [...(prevReviews[cafeId] || []), review]
     }));
   };
 
+  const editReview = (cafeId, updatedReview) => {
+    setReviews(prevReviews => ({
+      ...prevReviews,
+      [cafeId]: (prevReviews[cafeId] || []).map(review => 
+        review.id === updatedReview.id ? updatedReview : review
+      )
+    }));
+  };
+
   const getReviewsByCafeId = (cafeId) => {
-    if (!cafeId) return []; 
     return reviews[cafeId] || [];
   };
 
   return (
-    <ReviewContext.Provider value={{ addReview, getReviewsByCafeId }}>
+    <ReviewContext.Provider 
+      value={{ 
+        reviews,
+        addReview, 
+        editReview, 
+        getReviewsByCafeId 
+      }}
+    >
       {children}
     </ReviewContext.Provider>
   );
@@ -34,3 +46,5 @@ export const useReviews = () => {
   }
   return context;
 };
+
+export default ReviewContext;

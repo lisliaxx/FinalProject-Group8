@@ -4,38 +4,48 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useReviews } from '../context/ReviewContext';
 import ScheduleModal from '../components/ScheduleModal';
+import EditReviewModal from '../components/EditReviewModal';
 
-const ReviewItem = ({ review }) => (
-  <View style={styles.reviewItem}>
-    <View style={styles.reviewHeader}>
-      <View style={styles.reviewerInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{review.author[0]}</Text>
+const ReviewItem = ({ review, onEdit }) => {
+  return (
+    <TouchableOpacity 
+      style={styles.reviewItem}
+      onPress={() => onEdit(review)}
+    >
+      <View style={styles.reviewHeader}>
+        <View style={styles.reviewerInfo}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{review.author[0]}</Text>
+          </View>
+          <View>
+            <Text style={styles.authorName}>{review.author}</Text>
+            <Text style={styles.date}>
+              {review.date}
+              {review.edited && ' (edited)'}
+            </Text>
+          </View>
         </View>
-        <View>
-          <Text style={styles.authorName}>{review.author}</Text>
-          <Text style={styles.date}>{review.date}</Text>
+        <View style={styles.ratingContainer}>
+          <Text style={styles.reviewRating}>{'★'.repeat(review.rating)}</Text>
+          <Text style={styles.unfilledStars}>{'★'.repeat(5 - review.rating)}</Text>
         </View>
       </View>
-      <View style={styles.ratingContainer}>
-        <Text style={styles.reviewRating}>{'★'.repeat(review.rating)}</Text>
-        <Text style={styles.unfilledStars}>{'★'.repeat(5 - review.rating)}</Text>
-      </View>
-    </View>
-    <Text style={styles.reviewText}>{review.content}</Text>
-    {review.photoUrl && (
-      <Image 
-        source={{ uri: review.photoUrl }} 
-        style={styles.reviewImage}
-        resizeMode="cover"
-      />
-    )}
-  </View>
-);
+      <Text style={styles.reviewText}>{review.content}</Text>
+      {review.photoUrl && (
+        <Image 
+          source={{ uri: review.photoUrl }} 
+          style={styles.reviewImage}
+          resizeMode="cover"
+        />
+      )}
+    </TouchableOpacity>
+  );
+};
 
 const CafeDetailsScreen = ({ route, navigation }) => {
-  const { getReviewsByCafeId } = useReviews();
+  const { getReviewsByCafeId, editReview } = useReviews();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
   
   const cafe = route.params?.cafe;
   const cafeId = cafe?.id;
@@ -61,6 +71,17 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   const averageRating = cafeReviews.length > 0
     ? (cafeReviews.reduce((sum, review) => sum + review.rating, 0) / cafeReviews.length).toFixed(1)
     : '0';
+
+  const handleEditReview = (review) => {
+    if (review.author === 'You') { 
+      setEditingReview(review);
+    }
+  };
+
+  const handleSaveEdit = (updatedReview) => {
+    editReview(cafeId, updatedReview);
+    setEditingReview(null);
+  };
 
   return (
     <>
@@ -126,7 +147,11 @@ const CafeDetailsScreen = ({ route, navigation }) => {
           <View style={styles.reviewsList}>
             {cafeReviews.length > 0 ? (
               cafeReviews.map((review) => (
-                <ReviewItem key={review.id} review={review} />
+                <ReviewItem 
+                  key={review.id} 
+                  review={review}
+                  onEdit={handleEditReview}
+                />
               ))
             ) : (
               <Text style={styles.noReviewsText}>
@@ -142,6 +167,15 @@ const CafeDetailsScreen = ({ route, navigation }) => {
         onClose={() => setShowScheduleModal(false)}
         cafe={cafe}
       />
+
+      {editingReview && (
+        <EditReviewModal
+          visible={!!editingReview}
+          review={editingReview}
+          onClose={() => setEditingReview(null)}
+          onSave={handleSaveEdit}
+        />
+      )}
     </>
   );
 };
