@@ -25,12 +25,20 @@ export const ReviewProvider = ({ children }) => {
     return reviews[cafeId] || [];
   };
 
+  const deleteReview = (cafeId, reviewId) => {
+    setReviews(prevReviews => ({
+      ...prevReviews,
+      [cafeId]: prevReviews[cafeId].filter(review => review.id !== reviewId)
+    }));
+  };
+
   return (
     <ReviewContext.Provider 
       value={{ 
         reviews,
         addReview, 
         editReview, 
+        deleteReview,
         getReviewsByCafeId 
       }}
     >

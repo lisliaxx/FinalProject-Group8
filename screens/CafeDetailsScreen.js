@@ -1,49 +1,14 @@
 import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useReviews } from '../context/ReviewContext';
 import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
-
-const ReviewItem = ({ review, onEdit }) => {
-  return (
-    <TouchableOpacity 
-      style={styles.reviewItem}
-      onPress={() => onEdit(review)}
-    >
-      <View style={styles.reviewHeader}>
-        <View style={styles.reviewerInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{review.author[0]}</Text>
-          </View>
-          <View>
-            <Text style={styles.authorName}>{review.author}</Text>
-            <Text style={styles.date}>
-              {review.date}
-              {review.edited && ' (edited)'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.ratingContainer}>
-          <Text style={styles.reviewRating}>{'★'.repeat(review.rating)}</Text>
-          <Text style={styles.unfilledStars}>{'★'.repeat(5 - review.rating)}</Text>
-        </View>
-      </View>
-      <Text style={styles.reviewText}>{review.content}</Text>
-      {review.photoUrl && (
-        <Image 
-          source={{ uri: review.photoUrl }} 
-          style={styles.reviewImage}
-          resizeMode="cover"
-        />
-      )}
-    </TouchableOpacity>
-  );
-};
+import ReviewItem from '../components/ReviewItem'; 
 
 const CafeDetailsScreen = ({ route, navigation }) => {
-  const { getReviewsByCafeId, editReview } = useReviews();
+  const { getReviewsByCafeId, editReview, deleteReview } = useReviews();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
   
@@ -68,14 +33,14 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     });
   }, [navigation]);
 
-  const averageRating = cafeReviews.length > 0
-    ? (cafeReviews.reduce((sum, review) => sum + review.rating, 0) / cafeReviews.length).toFixed(1)
-    : '0';
-
   const handleEditReview = (review) => {
-    if (review.author === 'You') { 
+    if (review.author === 'You') {
       setEditingReview(review);
     }
+  };
+
+  const handleDeleteReview = (reviewId) => {
+    deleteReview(cafeId, reviewId);
   };
 
   const handleSaveEdit = (updatedReview) => {
@@ -89,7 +54,9 @@ const CafeDetailsScreen = ({ route, navigation }) => {
         <View style={styles.header}>
           <Text style={styles.name}>{cafe?.name}</Text>
           <View style={styles.ratingRow}>
-            <Text style={styles.rating}>★ {averageRating}</Text>
+            <Text style={styles.rating}>★ {cafeReviews.length > 0 
+              ? (cafeReviews.reduce((sum, review) => sum + review.rating, 0) / cafeReviews.length).toFixed(1)
+              : '0'}</Text>
             <Text style={styles.reviewCount}>({cafeReviews.length} reviews)</Text>
           </View>
         </View>
@@ -151,6 +118,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
                   key={review.id} 
                   review={review}
                   onEdit={handleEditReview}
+                  onDelete={review.author === 'You' ? handleDeleteReview : undefined}
                 />
               ))
             ) : (

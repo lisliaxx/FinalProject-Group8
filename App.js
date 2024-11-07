@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ReviewProvider } from './context/ReviewContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { ScheduleProvider } from './context/ScheduleContext';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -150,16 +151,17 @@ const styles = StyleSheet.create({
 
 const App = () => {
   return (
-    <NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <ScheduleProvider>
         <FavoritesProvider>
           <ReviewProvider>
-            <TabNavigator />
+            <NavigationContainer>
+              <TabNavigator />
+            </NavigationContainer>
           </ReviewProvider>
         </FavoritesProvider>
       </ScheduleProvider>
-    </NavigationContainer>
+    </GestureHandlerRootView>
   );
 };
-
 export default App;
