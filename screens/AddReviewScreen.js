@@ -19,12 +19,10 @@ const AddReviewScreen = ({ navigation, route }) => {
   const [review, setReview] = useState('');
   const [image, setImage] = useState(null);
   
-  // Get both cafeId and cafeName from route params
   const { cafeId, cafeName } = route.params;
   const { addReview } = useReviews();
 
   const pickImage = async () => {
-    // Request permissions
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {

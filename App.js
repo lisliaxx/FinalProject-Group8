@@ -1,4 +1,5 @@
 import React from 'react';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -11,6 +12,7 @@ import Colors from './constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { ReviewProvider } from './context/ReviewContext';
 import { FavoritesProvider } from './context/FavoritesContext';
+import { ScheduleProvider } from './context/ScheduleContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -32,13 +34,28 @@ const MapStackNavigator = () => {
       <Stack.Screen 
         name="CafeDetails"
         component={CafeDetailsScreen}
-        options={{
+        options={({ navigation, route }) => ({
           title: 'Cafe Details',
           headerStyle: {
             backgroundColor: Colors.primary,
           },
           headerTintColor: Colors.textLight,
-        }}
+          headerRight: () => (
+            <TouchableOpacity 
+              style={styles.headerButton}
+              onPress={() => {
+                // Access the showScheduleModal function through route params
+                route.params?.showScheduleModal?.();
+              }}
+            >
+              <Ionicons 
+                name="calendar-outline" 
+                size={24} 
+                color={Colors.textLight}
+              />
+            </TouchableOpacity>
+          ),
+        })}
       />
       <Stack.Screen 
         name="AddReview"
@@ -73,13 +90,27 @@ const FavoritesStackNavigator = () => {
       <Stack.Screen 
         name="CafeDetails"
         component={CafeDetailsScreen}
-        options={{
+        options={({ navigation, route }) => ({
           title: 'Cafe Details',
           headerStyle: {
             backgroundColor: Colors.primary,
           },
           headerTintColor: Colors.textLight,
-        }}
+          headerRight: () => (
+            <TouchableOpacity 
+              style={styles.headerButton}
+              onPress={() => {
+                route.params?.showScheduleModal?.();
+              }}
+            >
+              <Ionicons 
+                name="calendar-outline" 
+                size={24} 
+                color={Colors.textLight}
+              />
+            </TouchableOpacity>
+          ),
+        })}
       />
       <Stack.Screen 
         name="AddReview"
@@ -122,14 +153,8 @@ const TabNavigator = () => {
         headerShown: false,
       })}
     >
-      <Tab.Screen 
-        name="Map" 
-        component={MapStackNavigator}
-      />
-      <Tab.Screen 
-        name="Favorites" 
-        component={FavoritesStackNavigator}
-      />
+      <Tab.Screen name="Map" component={MapStackNavigator} />
+      <Tab.Screen name="Favorites" component={FavoritesStackNavigator} />
       <Tab.Screen 
         name="Profile"
         component={ProfileScreen}
@@ -145,15 +170,24 @@ const TabNavigator = () => {
   );
 };
 
+const styles = StyleSheet.create({
+  headerButton: {
+    marginRight: 16,
+    padding: 8,
+  },
+});
+
 const App = () => {
   return (
-    <FavoritesProvider>
-      <ReviewProvider>
-        <NavigationContainer>
-          <TabNavigator />
-        </NavigationContainer>
-      </ReviewProvider>
-    </FavoritesProvider>
+    <ScheduleProvider>
+      <FavoritesProvider>
+        <ReviewProvider>
+          <NavigationContainer>
+            <TabNavigator />
+          </NavigationContainer>
+        </ReviewProvider>
+      </FavoritesProvider>
+    </ScheduleProvider>
   );
 };
 

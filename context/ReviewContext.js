@@ -7,7 +7,7 @@ export const ReviewProvider = ({ children }) => {
   const [reviews, setReviews] = useState({});
 
   const addReview = (cafeId, review) => {
-    if (!cafeId) return; // Don't add review if no cafeId
+    if (!cafeId) return; 
 
     setReviews(prevReviews => ({
       ...prevReviews,
@@ -16,7 +16,7 @@ export const ReviewProvider = ({ children }) => {
   };
 
   const getReviewsByCafeId = (cafeId) => {
-    if (!cafeId) return []; // Return empty array if no cafeId
+    if (!cafeId) return []; 
     return reviews[cafeId] || [];
   };
 
