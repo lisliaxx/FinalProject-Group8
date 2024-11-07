@@ -33,68 +33,80 @@ const ReviewItem = ({ review }) => (
 
 const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId } = useReviews();
-  const cafeId = route.params?.id || 'default-cafe';
+  
+  // Get the complete cafe object from route params
+  const cafe = route.params?.cafe;
+  
+  // Ensure we're using the correct cafeId
+  const cafeId = cafe?.id;
+  
+  // Get reviews specific to this cafe
   const cafeReviews = getReviewsByCafeId(cafeId);
-  const averageRating = cafeReviews.length > 0
-    ? (cafeReviews.reduce((sum, review) => sum + review.rating, 0) / cafeReviews.length).toFixed(1)
-    : 0;
 
-  const mockCafeDetails = {
-    name: 'Sample Cafe',
-    address: '123 Coffee Street',
-    hours: '8:00 AM - 8:00 PM',
-    features: {
-      petFriendly: true,
-      hasParking: true,
-      wheelchairAccessible: true,
-      hasWifi: true
-    }
-  };
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.name}>{mockCafeDetails.name}</Text>
+        <Text style={styles.name}>{cafe?.name}</Text>
         <View style={styles.ratingRow}>
-          <Text style={styles.rating}>★ {averageRating}</Text>
+          <Text style={styles.rating}>
+            ★ {cafeReviews.length > 0 
+              ? (cafeReviews.reduce((sum, review) => sum + review.rating, 0) / cafeReviews.length).toFixed(1) 
+              : '0'}
+          </Text>
           <Text style={styles.reviewCount}>({cafeReviews.length} reviews)</Text>
         </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Address</Text>
-        <Text>{mockCafeDetails.address}</Text>
+        <Text>{cafe?.address}</Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Hours</Text>
-        <Text>{mockCafeDetails.hours}</Text>
+        <Text>{cafe?.hours || '8:00 AM - 8:00 PM'}</Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Features</Text>
-        {mockCafeDetails.features.petFriendly && 
-          <Text>🐾 Pet Friendly</Text>}
-        {mockCafeDetails.features.hasParking && 
-          <Text>🚗 Parking Available</Text>}
-        {mockCafeDetails.features.wheelchairAccessible && 
-          <Text>♿ Wheelchair Accessible</Text>}
-        {mockCafeDetails.features.hasWifi && 
-          <Text>📶 Free WiFi</Text>}
+        <View style={styles.featuresContainer}>
+          {cafe?.features?.petFriendly && (
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>🐾 Pet Friendly</Text>
+            </View>
+          )}
+          {cafe?.features?.hasParking && (
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>🚗 Parking Available</Text>
+            </View>
+          )}
+          {cafe?.features?.wheelchairAccessible && (
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>♿ Wheelchair Accessible</Text>
+            </View>
+          )}
+          {cafe?.features?.hasWifi && (
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>📶 Free WiFi</Text>
+            </View>
+          )}
+        </View>
       </View>
 
-      {/* Reviews Section */}
       <View style={styles.section}>
         <View style={styles.reviewsHeader}>
           <Text style={styles.sectionTitle}>Reviews</Text>
           <TouchableOpacity 
             style={styles.addReviewButton}
-            onPress={() => navigation.navigate('AddReview', { cafeId })}
+            onPress={() => navigation.navigate('AddReview', { 
+              cafeId: cafeId,
+              cafeName: cafe?.name 
+            })}
           >
             <Text style={styles.addReviewText}>+ Add Review</Text>
           </TouchableOpacity>
         </View>
         
-        {/* Reviews List */}
         <View style={styles.reviewsList}>
           {cafeReviews.length > 0 ? (
             cafeReviews.map((review) => (
@@ -110,6 +122,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     </ScrollView>
   );
 };
+
 
 
 const styles = StyleSheet.create({
@@ -243,6 +256,29 @@ const styles = StyleSheet.create({
   unfilledStars: {
     color: Colors.border,
     fontSize: 16,
+  },
+  featuresContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  featureItem: {
+    backgroundColor: Colors.surface,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  featureText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
   },
 });
 

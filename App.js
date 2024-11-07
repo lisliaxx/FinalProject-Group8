@@ -10,6 +10,7 @@ import AddReviewScreen from './screens/AddReviewScreen';
 import Colors from './constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import { ReviewProvider } from './context/ReviewContext';
+import { FavoritesProvider } from './context/FavoritesContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -146,11 +147,13 @@ const TabNavigator = () => {
 
 const App = () => {
   return (
-    <ReviewProvider>
-      <NavigationContainer>
-        <TabNavigator />
-      </NavigationContainer>
-    </ReviewProvider>
+    <FavoritesProvider>
+      <ReviewProvider>
+        <NavigationContainer>
+          <TabNavigator />
+        </NavigationContainer>
+      </ReviewProvider>
+    </FavoritesProvider>
   );
 };
 

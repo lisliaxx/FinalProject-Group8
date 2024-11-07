@@ -19,16 +19,18 @@ const AddReviewScreen = ({ navigation, route }) => {
   const [review, setReview] = useState('');
   const [image, setImage] = useState(null);
   
-  const { cafeId } = route.params;
+  // Get both cafeId and cafeName from route params
+  const { cafeId, cafeName } = route.params;
   const { addReview } = useReviews();
 
   const pickImage = async () => {
+    // Request permissions
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
       Alert.alert(
-        'Permission Needed',
-        'Please grant camera roll permissions to add photos to your review.',
+        'Permission Required',
+        'Please allow access to your photo library to add images.',
         [{ text: 'OK' }]
       );
       return;
@@ -46,11 +48,7 @@ const AddReviewScreen = ({ navigation, route }) => {
         setImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert(
-        'Error',
-        'Failed to pick image. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
@@ -66,7 +64,7 @@ const AddReviewScreen = ({ navigation, route }) => {
     }
 
     const newReview = {
-      id: Date.now().toString(), 
+      id: Date.now().toString(),
       author: 'You',
       rating: rating,
       date: new Date().toLocaleDateString('en-US', {
@@ -80,8 +78,19 @@ const AddReviewScreen = ({ navigation, route }) => {
     };
 
     addReview(cafeId, newReview);
-    navigation.goBack();
+    
+    Alert.alert(
+      'Success',
+      `Your review for ${cafeName} has been posted!`,
+      [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack()
+        }
+      ]
+    );
   };
+
   return (
     <ScrollView style={styles.container}>
       {/* Rating Section */}

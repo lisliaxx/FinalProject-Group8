@@ -3,9 +3,12 @@ import React, { createContext, useState, useContext } from 'react';
 const ReviewContext = createContext();
 
 export const ReviewProvider = ({ children }) => {
+  // Store reviews as an object with cafeId as keys
   const [reviews, setReviews] = useState({});
 
   const addReview = (cafeId, review) => {
+    if (!cafeId) return; // Don't add review if no cafeId
+
     setReviews(prevReviews => ({
       ...prevReviews,
       [cafeId]: [...(prevReviews[cafeId] || []), review]
@@ -13,6 +16,7 @@ export const ReviewProvider = ({ children }) => {
   };
 
   const getReviewsByCafeId = (cafeId) => {
+    if (!cafeId) return []; // Return empty array if no cafeId
     return reviews[cafeId] || [];
   };
 
