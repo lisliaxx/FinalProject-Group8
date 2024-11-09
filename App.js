@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TouchableOpacity, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -14,9 +14,14 @@ import { ReviewProvider } from './context/ReviewContext';
 import { FavoritesProvider } from './context/FavoritesContext';
 import { ScheduleProvider } from './context/ScheduleContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './Firebase/firebaseSetup';
+import Login from './screens/Login';
+import Signup from './screens/Signup';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+const AuthStack = createStackNavigator();
 
 const MapStackNavigator = () => {
   return (
@@ -142,6 +147,36 @@ const TabNavigator = () => {
   );
 };
 
+
+// Defines the stack navigator for authentication screens
+const AuthStackNavigator = () => (
+  <AuthStack.Navigator>
+    <AuthStack.Screen name="Login" component={Login} options={{ title: 'Login' }} />
+    <AuthStack.Screen name="Signup" component={Signup} options={{ title: 'Signup',headerLeft: () => null, }} />
+  </AuthStack.Navigator>
+);
+
+// Wraps the TabNavigator in a stack navigator to manage screen transitions and conditional navigation
+const MainStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="MainTabs" component={TabNavigator} />
+  </Stack.Navigator>
+);
+
+// Main entry point of the application
+const App = () => {
+  // State to keep track of user authentication status
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Listen for authentication changes (e.g., user logging in or out)
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // Set isAuthenticated to true if user is logged in, false otherwise
+      setIsAuthenticated(!!user);
+    });
+    return unsubscribe;
+  }, []);
+
 const styles = StyleSheet.create({
   headerButton: {
     marginRight: 16,
@@ -149,19 +184,18 @@ const styles = StyleSheet.create({
   },
 });
 
-const App = () => {
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ScheduleProvider>
-        <FavoritesProvider>
-          <ReviewProvider>
-            <NavigationContainer>
-              <TabNavigator />
-            </NavigationContainer>
-          </ReviewProvider>
-        </FavoritesProvider>
-      </ScheduleProvider>
-    </GestureHandlerRootView>
+return (
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <ScheduleProvider>
+      <FavoritesProvider>
+        <ReviewProvider>
+          <NavigationContainer>
+            {isAuthenticated ? <MainStack /> : <AuthStackNavigator />}
+          </NavigationContainer>
+        </ReviewProvider>
+      </FavoritesProvider>
+    </ScheduleProvider>
+  </GestureHandlerRootView>
   );
 };
 export default App;
