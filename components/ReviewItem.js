@@ -48,34 +48,34 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
     >
       <TouchableOpacity 
         style={styles.reviewItem}
-        onPress={() => review.author === 'You' && onEdit(review)}
+        onPress={() => review?.author === 'You' && onEdit(review)}
       >
         <View style={styles.reviewHeader}>
           <View style={styles.reviewerInfo}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{review.author[0]}</Text>
+              <Text style={styles.avatarText}>{review?.author?.[0] || 'U'}</Text>
             </View>
             <View>
-              <Text style={styles.authorName}>{review.author}</Text>
+              <Text style={styles.authorName}>{review?.author|| 'Unknown'}</Text>
               <Text style={styles.date}>
-                {review.date}
-                {review.edited && ' (edited)'}
+                {review?.date|| 'N/A'}
+                {review?.edited && ' (edited)'}
               </Text>
             </View>
           </View>
           <View style={styles.ratingContainer}>
-            <Text style={styles.reviewRating}>{'★'.repeat(review.rating)}</Text>
-            <Text style={styles.unfilledStars}>{'★'.repeat(5 - review.rating)}</Text>
+            <Text style={styles.reviewRating}>{'★'.repeat(review?.rating)}</Text>
+            <Text style={styles.unfilledStars}>{'★'.repeat(5 - review?.rating)}</Text>
           </View>
         </View>
-        <Text style={styles.reviewText}>{review.content}</Text>
-        {review.photoUrl && (
+        <Text style={styles.reviewText}>{review?.content || 'No content available'}</Text>
+        {review?.photoUrl ? (
           <Image 
             source={{ uri: review.photoUrl }} 
             style={styles.reviewImage}
             resizeMode="cover"
           />
-        )}
+        ): null}
       </TouchableOpacity>
     </Swipeable>
   );

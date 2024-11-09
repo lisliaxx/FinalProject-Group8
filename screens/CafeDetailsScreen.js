@@ -45,7 +45,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
             return;
           }
   
-          const reviewsRef = collection(db, 'reviews');
+          const reviewsRef = collection(database, 'reviews');
           const q = query(reviewsRef, where('cafeId', '==', cafeId), where('userId', '==', userId));
           const querySnapshot = await getDocs(q);
   
@@ -70,11 +70,21 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   };
 
   const handleDeleteReview = (reviewId) => {
-    deleteReview(cafeId, reviewId);
+    Alert.alert(
+      "Delete Review",
+      "Are you sure you want to delete this review?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deleteReview(reviewId) }
+      ]
+    );
   };
 
   const handleSaveEdit = (updatedReview) => {
-    editReview(cafeId, updatedReview);
+    const updatedReviews = cafeReviews.map(review => 
+      review.id === updatedReview.id ? updatedReview : review
+    );
+    setCafeReviews(updatedReviews);
     setEditingReview(null);
   };
 
@@ -148,7 +158,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
                   key={review.id} 
                   review={review}
                   onEdit={handleEditReview}
-                  onDelete={review.author === 'You' ? handleDeleteReview : undefined}
+                  onDelete={review.userId === auth.currentUser.uid ? handleDeleteReview : undefined}
                 />
               ))
             ) : (
