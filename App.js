@@ -152,7 +152,7 @@ const TabNavigator = () => {
 const AuthStackNavigator = () => (
   <AuthStack.Navigator>
     <AuthStack.Screen name="Login" component={Login} options={{ title: 'Login' }} />
-    <AuthStack.Screen name="Signup" component={Signup} options={{ title: 'Signup' }} />
+    <AuthStack.Screen name="Signup" component={Signup} options={{ title: 'Signup',headerLeft: () => null, }} />
   </AuthStack.Navigator>
 );
 
