@@ -5,7 +5,8 @@ import { auth } from '../Firebase/firebaseSetup';
 import { signOut } from 'firebase/auth'; 
 
 function ProfileScreen({ navigation }) {
-  
+  const currentUser = auth.currentUser;
+
 // Sign-out function
 const handleSignOut = () => {
   signOut(auth)
@@ -32,14 +33,8 @@ const handleSignOut = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-      <View style={styles.profileInfo}>
-        <Text style={styles.label}>Name:</Text>
-        <Text>User Name</Text>
-        
-        <Text style={styles.label}>Favorite Cafes:</Text>
-        <Text>0</Text>
-      </View>
+      <Text>Email: {currentUser?.email}</Text>
+      <Text>Uid: {currentUser?.uid}</Text>
     </View>
   );
 }
@@ -47,24 +42,11 @@ const handleSignOut = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  profileInfo: {
-    marginTop: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 8,
-  },
-  headerButton: {
-    marginRight: 16,
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
+
 
 export default ProfileScreen;
