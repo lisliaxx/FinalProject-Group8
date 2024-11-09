@@ -13,14 +13,18 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import * as ImagePicker from 'expo-image-picker';
 import { useReviews } from '../context/ReviewContext';
+import { database, auth, storage } from '../Firebase/firebaseSetup'; 
+import { collection, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const AddReviewScreen = ({ navigation, route }) => {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   const [image, setImage] = useState(null);
-  
+  const [uploading, setUploading] = useState(false);
+
   const { cafeId, cafeName } = route.params;
-  const { addReview } = useReviews();
+  
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -50,43 +54,47 @@ const AddReviewScreen = ({ navigation, route }) => {
     }
   };
 
-  const handleSubmitReview = () => {
-    if (rating === 0) {
-      Alert.alert('Error', 'Please select a rating');
+  const uploadImageAsync = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const imageRef = ref(storage, `reviews/${auth.currentUser.uid}/${Date.now()}`);
+    await uploadBytes(imageRef, blob);
+    return await getDownloadURL(imageRef);
+  };
+
+  const handleSubmitReview = async () => {
+    if (rating === 0 || review.trim().length < 3) {
+      Alert.alert('Error', 'Please complete the review and rating.');
       return;
     }
 
-    if (review.trim().length < 3) {
-      Alert.alert('Error', 'Please write a review');
-      return;
+    setUploading(true);
+    let imageUrl = null;
+
+    try {
+      if (image) {
+        imageUrl = await uploadImageAsync(image); // Upload image to Firebase Storage
+      }
+
+      const newReview = {
+        userId: auth.currentUser.uid,
+        cafeId,
+        cafeName,
+        rating,
+        review: review.trim(),
+        photoUrl: imageUrl,
+        date: new Date().toISOString(),
+      };
+
+      await addDoc(collection(database, 'reviews'), newReview);
+
+      Alert.alert('Success', `Your review for ${cafeName} has been posted!`);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit review. Please try again.');
+    } finally {
+      setUploading(false);
     }
-
-    const newReview = {
-      id: Date.now().toString(),
-      author: 'You',
-      rating: rating,
-      date: new Date().toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      }),
-      content: review.trim(),
-      photoUrl: image,
-      cafeId: cafeId 
-    };
-
-    addReview(cafeId, newReview);
-    
-    Alert.alert(
-      'Success',
-      `Your review for ${cafeName} has been posted!`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack()
-        }
-      ]
-    );
   };
 
   return (
@@ -165,10 +173,10 @@ const AddReviewScreen = ({ navigation, route }) => {
       <TouchableOpacity
         style={[
           styles.submitButton,
-          (!rating || !review.trim()) && styles.submitButtonDisabled
+          (!rating || !review.trim() || uploading) && styles.submitButtonDisabled
         ]}
         onPress={handleSubmitReview}
-        disabled={!rating || !review.trim()}
+        disabled={!rating || !review.trim() || uploading}
       >
         <Text style={styles.submitButtonText}>Post Review</Text>
       </TouchableOpacity>

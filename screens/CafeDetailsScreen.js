@@ -1,20 +1,22 @@
-import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useLayoutEffect, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useReviews } from '../context/ReviewContext';
 import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
+import { database, auth } from '../Firebase/firebaseSetup'; 
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId, editReview, deleteReview } = useReviews();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
-  
+  const [cafeReviews, setCafeReviews] = useState([]); // State to hold fetched reviews
+
   const cafe = route.params?.cafe;
   const cafeId = cafe?.id;
-  const cafeReviews = getReviewsByCafeId(cafeId);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -32,6 +34,34 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       ),
     });
   }, [navigation]);
+
+    // Fetch reviews from Firestore that match the cafeId and the current user's uid
+    useEffect(() => {
+      const fetchUserReviews = async () => {
+        try {
+          const userId = auth.currentUser?.uid;
+          if (!userId) {
+            Alert.alert("Error", "User is not logged in.");
+            return;
+          }
+  
+          const reviewsRef = collection(db, 'reviews');
+          const q = query(reviewsRef, where('cafeId', '==', cafeId), where('userId', '==', userId));
+          const querySnapshot = await getDocs(q);
+  
+          const reviews = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          setCafeReviews(reviews);
+        } catch (error) {
+          Alert.alert("Error", "Failed to load reviews.");
+        }
+      };
+  
+      fetchUserReviews();
+    }, [cafeId]);
 
   const handleEditReview = (review) => {
     if (review.author === 'You') {
