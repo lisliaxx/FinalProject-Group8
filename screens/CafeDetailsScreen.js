@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useReviews } from '../context/ReviewContext';
@@ -15,8 +15,9 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId, editReview, deleteReview } = useReviews();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
-  const [cafeReviews, setCafeReviews] = useState([]); // State to hold fetched reviews
+  const [cafeReviews, setCafeReviews] = useState([]); 
   const [averageRating, setAverageRating] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const cafe = route.params?.cafe;
   const cafeId = cafe?.id;
@@ -117,9 +118,48 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     );
   };
 
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const cafeDoc = await getDoc(doc(database, 'cafes', cafe.id));
+      if (cafeDoc.exists()) {
+        setCafe({ id: cafeDoc.id, ...cafeDoc.data() });
+      }
+
+      const reviewsRef = collection(database, 'reviews');
+      const q = query(reviewsRef, where('cafeId', '==', cafe.id), orderBy('date', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const fetchedReviews = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCafeReviews(fetchedReviews);
+
+      if (fetchedReviews.length > 0) {
+        const total = fetchedReviews.reduce((sum, review) => sum + review.rating, 0);
+        setAverageRating(total / fetchedReviews.length);
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      Alert.alert('Error', 'Failed to refresh data');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [cafe?.id]);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
         {/* Cafe Info Section */}
         <View style={styles.cafeInfo}>
           <Text style={styles.cafeName}>{cafe.name}</Text>
