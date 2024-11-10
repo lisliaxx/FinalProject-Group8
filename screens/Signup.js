@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { auth } from '../Firebase/firebaseSetup'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import Colors from '../constants/Colors';
@@ -91,60 +91,62 @@ export default function Signup({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.formContainer}>
-        <Text style={styles.header}>Create Account</Text>
-        <Text style={styles.subHeader}>Join our coffee-loving community</Text>
-        
-        <TextInput
-          placeholder="Email Address"
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-          style={styles.input}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor={Colors.textSecondary}
-        />
-        <TextInput
-          placeholder="Password"
-          value={password}
-          onChangeText={handlePasswordChange}
-          style={styles.input}
-          secureTextEntry
-          placeholderTextColor={Colors.textSecondary}
-        />
-        {passwordErrors.length > 0 && (
-          <Text style={styles.passwordHint}>
-            Password must contain:{'\n'}
-            {passwordErrors.join('\n')}
-          </Text>
-        )}
-        <TextInput
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChangeText={(text) => setConfirmPassword(text)}
-          style={styles.input}
-          secureTextEntry
-          placeholderTextColor={Colors.textSecondary}
-        />
-        
-        
-        <TouchableOpacity 
-          style={styles.signupButton}
-          onPress={handleSignup}
-        >
-          <Text style={styles.signupButtonText}>Create Account</Text>
-        </TouchableOpacity>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <View style={styles.formContainer}>
+          <Text style={styles.header}>Create Account</Text>
+          <Text style={styles.subHeader}>Join our coffee-loving community</Text>
+          
+          <TextInput
+            placeholder="Email Address"
+            value={email}
+            onChangeText={(text) => setEmail(text)}
+            style={styles.input}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholderTextColor={Colors.textSecondary}
+          />
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={handlePasswordChange}
+            style={styles.input}
+            secureTextEntry
+            placeholderTextColor={Colors.textSecondary}
+          />
+          {passwordErrors.length > 0 && (
+            <Text style={styles.passwordHint}>
+              Password must contain:{'\n'}
+              {passwordErrors.join('\n')}
+            </Text>
+          )}
+          <TextInput
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChangeText={(text) => setConfirmPassword(text)}
+            style={styles.input}
+            secureTextEntry
+            placeholderTextColor={Colors.textSecondary}
+          />
+          
+          
+          <TouchableOpacity 
+            style={styles.signupButton}
+            onPress={handleSignup}
+          >
+            <Text style={styles.signupButtonText}>Create Account</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Login')}
-        >
-          <Text style={styles.switchText}>
-            Already have an account? <Text style={styles.switchTextHighlight}>Log in</Text>
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Login')}
+          >
+            <Text style={styles.switchText}>
+              Already have an account? <Text style={styles.switchTextHighlight}>Log in</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }
 

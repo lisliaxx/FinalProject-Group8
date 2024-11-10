@@ -8,6 +8,8 @@ import {
   ScrollView,
   Image,
   Alert,
+  TouchableWithoutFeedback,
+  Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
@@ -64,8 +66,9 @@ const AddReviewScreen = ({ navigation, route }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Rating Section */}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <ScrollView style={styles.container}>
+        {/* Rating Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Rating</Text>
         <View style={styles.ratingContainer}>
@@ -120,6 +123,7 @@ const AddReviewScreen = ({ navigation, route }) => {
         <Text style={styles.submitButtonText}>Post Review</Text>
       </TouchableOpacity>
     </ScrollView>
+  </TouchableWithoutFeedback>
   );
 };
 

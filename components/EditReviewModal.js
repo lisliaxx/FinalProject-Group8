@@ -9,6 +9,8 @@ import {
   Image,
   Alert,
   ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
@@ -109,6 +111,7 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
       transparent={true}
       onRequestClose={onClose}
     >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.modalContainer}>
         <ScrollView style={styles.modalContent}>
           <Text style={styles.modalTitle}>Edit Review</Text>
@@ -191,6 +194,7 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
           </View>
         </ScrollView>
       </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };

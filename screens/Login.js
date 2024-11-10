@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { auth } from '../Firebase/firebaseSetup'; 
 import { signInWithEmailAndPassword } from 'firebase/auth'; 
 import Colors from '../constants/Colors';
@@ -28,8 +28,9 @@ export default function Login({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.formContainer}>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        <View style={styles.formContainer}>
         <Text style={styles.header}>Welcome Back</Text>
         <Text style={styles.subHeader}>Login to find your perfect cafe</Text>
         
@@ -67,6 +68,7 @@ export default function Login({ navigation }) {
         </TouchableOpacity>
       </View>
     </View>
+  </TouchableWithoutFeedback>
   );
 }
 
