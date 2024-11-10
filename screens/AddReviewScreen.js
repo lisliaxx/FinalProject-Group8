@@ -76,8 +76,11 @@ const AddReviewScreen = ({ navigation, route }) => {
         imageUrl = await uploadImageAsync(image); // Upload image to Firebase Storage
       }
 
+      const userEmail = auth.currentUser?.email;
+
       const newReview = {
         userId: auth.currentUser.uid,
+        email: userEmail,
         cafeId,
         cafeName,
         rating,

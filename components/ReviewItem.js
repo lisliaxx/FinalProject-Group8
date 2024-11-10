@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-na
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
+import { auth } from '../Firebase/firebaseSetup'; 
 
 const ReviewItem = ({ review, onEdit, onDelete }) => {
   const swipeableRef = useRef(null);
+
+  const currentUser = auth.currentUser;
 
   const handleDelete = () => {
     Alert.alert(
@@ -56,7 +59,7 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
               <Text style={styles.avatarText}>{review?.author?.[0] || 'U'}</Text>
             </View>
             <View>
-              <Text style={styles.authorName}>{review?.author|| 'Unknown'}</Text>
+              <Text style={styles.authorName}>{currentUser?.email || 'Unknown'}</Text>
               <Text style={styles.date}>
                 {review?.date|| 'N/A'}
                 {review?.edited && ' (edited)'}
@@ -68,7 +71,7 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
             <Text style={styles.unfilledStars}>{'★'.repeat(5 - review?.rating)}</Text>
           </View>
         </View>
-        <Text style={styles.reviewText}>{review?.content || 'No content available'}</Text>
+        <Text style={styles.reviewText}>{review?.review || 'No review available'}</Text>
         {review?.photoUrl ? (
           <Image 
             source={{ uri: review.photoUrl }} 
