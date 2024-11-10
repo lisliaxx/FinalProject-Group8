@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  ScrollView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,38 +15,18 @@ import { useSchedules } from '../context/ScheduleContext';
 const ScheduleModal = ({ visible, onClose, cafe }) => {
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(Platform.OS === 'ios');
-  const { addSchedule, removeSchedule, getSchedulesForCafe } = useSchedules();
+  const { addSchedule } = useSchedules();
   
-  const schedules = getSchedulesForCafe(cafe?.id);
-
   const handleConfirm = async () => {
     if (await addSchedule(cafe.id, cafe.name, date)) {
       if (Platform.OS === 'android') {
         setShowPicker(false);
       }
       alert('Visit scheduled! You will receive a reminder notification.');
+      onClose();
     } else {
       alert('Failed to schedule visit. Please try again.');
     }
-  };
-
-  const handleDelete = async (scheduleId) => {
-    if (await removeSchedule(cafe.id, scheduleId)) {
-      alert('Schedule removed successfully.');
-    } else {
-      alert('Failed to remove schedule. Please try again.');
-    }
-  };
-
-  const formatDate = (dateString) => {
-    const options = {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-    };
-    return new Date(dateString).toLocaleDateString('en-US', options);
   };
 
   return (
@@ -103,27 +82,6 @@ const ScheduleModal = ({ visible, onClose, cafe }) => {
           >
             <Text style={styles.addButtonText}>Schedule Visit</Text>
           </TouchableOpacity>
-
-          {schedules.length > 0 && (
-            <>
-              <Text style={styles.schedulesTitle}>Scheduled Visits</Text>
-              <ScrollView style={styles.schedulesList}>
-                {schedules.map((schedule) => (
-                  <View key={schedule.id} style={styles.scheduleItem}>
-                    <Text style={styles.scheduleDate}>
-                      {formatDate(schedule.date)}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => handleDelete(schedule.id)}
-                      style={styles.deleteButton}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={Colors.error} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            </>
-          )}
         </View>
       </View>
     </Modal>
@@ -141,7 +99,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
-    maxHeight: '80%',
   },
   header: {
     flexDirection: 'row',
@@ -185,32 +142,6 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  schedulesTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  schedulesList: {
-    maxHeight: 200,
-  },
-  scheduleItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: Colors.surface,
-    borderRadius: 8,
-    marginVertical: 4,
-  },
-  scheduleDate: {
-    fontSize: 16,
-    color: Colors.textPrimary,
-  },
-  deleteButton: {
-    padding: 4,
   },
 });
 
