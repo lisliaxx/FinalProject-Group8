@@ -1,39 +1,26 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 
-const ReviewItem = ({ review, onEdit, onDelete }) => {
-  const swipeableRef = useRef(null);
-
-  const handleDelete = () => {
-    Alert.alert(
-      "Delete Review",
-      "Are you sure you want to delete this review?",
-      [
-        {
-          text: "Cancel",
-          onPress: () => swipeableRef.current?.close(),
-          style: "cancel"
-        },
-        {
-          text: "Delete",
-          onPress: () => {
-            swipeableRef.current?.close();
-            onDelete(review.id);
-          },
-          style: "destructive"
-        }
-      ]
-    );
-  };
-
+const ReviewItem = ({ review, onEdit, onDelete, isEditable }) => {
+  const formattedDate = new Date(review.date).toLocaleString();
+  const images = review.photoUrls || (review.photoUrl ? [review.photoUrl] : []);
   const renderRightActions = () => {
     return (
       <TouchableOpacity
-        style={styles.deleteAction}
-        onPress={handleDelete}
+        style={styles.deleteButton}
+        onPress={() => {
+          Alert.alert(
+            "Delete Review",
+            "Are you sure you want to delete this review?",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Delete", style: "destructive", onPress: () => onDelete(review.id) }
+            ]
+          );
+        }}
       >
         <Ionicons name="trash-outline" size={24} color={Colors.white} />
       </TouchableOpacity>
@@ -42,39 +29,54 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
 
   return (
     <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
+      renderRightActions={isEditable ? renderRightActions : null}
       rightThreshold={40}
     >
       <TouchableOpacity 
-        style={styles.reviewItem}
-        onPress={() => review.author === 'You' && onEdit(review)}
+        style={styles.reviewContainer}
+        onPress={() => isEditable && onEdit(review)}
       >
-        <View style={styles.reviewHeader}>
-          <View style={styles.reviewerInfo}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{review.author[0]}</Text>
+        {/* User Info and Rating */}
+        <View style={styles.headerRow}>
+          <View style={styles.userInfo}>
+            <View style={styles.avatarContainer}>
+              <Text style={styles.avatarText}>{review.email[0].toUpperCase()}</Text>
             </View>
             <View>
-              <Text style={styles.authorName}>{review.author}</Text>
-              <Text style={styles.date}>
-                {review.date}
-                {review.edited && ' (edited)'}
-              </Text>
+              <Text style={styles.emailText}>{review.email}</Text>
+              <Text style={styles.dateText}>{formattedDate}</Text>
             </View>
           </View>
           <View style={styles.ratingContainer}>
-            <Text style={styles.reviewRating}>{'★'.repeat(review.rating)}</Text>
-            <Text style={styles.unfilledStars}>{'★'.repeat(5 - review.rating)}</Text>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Text
+                key={star}
+                style={[styles.star, star <= review.rating ? styles.starFilled : styles.starEmpty]}
+              >
+                ★
+              </Text>
+            ))}
           </View>
         </View>
-        <Text style={styles.reviewText}>{review.content}</Text>
-        {review.photoUrl && (
-          <Image 
-            source={{ uri: review.photoUrl }} 
-            style={styles.reviewImage}
-            resizeMode="cover"
-          />
+
+        {/* Review Text */}
+        <Text style={styles.reviewText}>{review.review}</Text>
+
+        {/* Images */}
+        {images.length > 0 && (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.imageScroll}
+          >
+            {images.map((imageUrl, index) => (
+              <Image
+                key={index}
+                source={{ uri: imageUrl }}
+                style={styles.reviewImage}
+              />
+            ))}
+          </ScrollView>
         )}
       </TouchableOpacity>
     </Swipeable>
@@ -82,31 +84,28 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
 };
 
 const styles = StyleSheet.create({
-  reviewItem: {
-    backgroundColor: Colors.surface,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  reviewContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  reviewHeader: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  reviewerInfo: {
+  userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatar: {
+  avatarContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -120,38 +119,45 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  authorName: {
+  emailText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: Colors.textPrimary,
   },
-  date: {
-    fontSize: 14,
+  dateText: {
+    fontSize: 12,
     color: Colors.textSecondary,
+    marginTop: 2,
   },
   ratingContainer: {
     flexDirection: 'row',
   },
-  reviewRating: {
-    color: Colors.rating,
-    fontSize: 16,
+  star: {
+    fontSize: 18,
+    marginHorizontal: 1,
   },
-  unfilledStars: {
-    color: Colors.border,
-    fontSize: 16,
+  starFilled: {
+    color: Colors.rating || '#FFD700',
+  },
+  starEmpty: {
+    color: Colors.textSecondary,
   },
   reviewText: {
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.textPrimary,
-    lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  imageScroll: {
+    marginVertical: 8,
   },
   reviewImage: {
-    width: '100%',
-    height: 200,
+    width: 120,
+    height: 120,
     borderRadius: 8,
+    marginRight: 8,
   },
-  deleteAction: {
+  deleteButton: {
     backgroundColor: Colors.error,
     justifyContent: 'center',
     alignItems: 'center',

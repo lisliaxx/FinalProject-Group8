@@ -13,80 +13,54 @@ import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import * as ImagePicker from 'expo-image-picker';
 import { useReviews } from '../context/ReviewContext';
+import { database, auth, storage } from '../Firebase/firebaseSetup'; 
+import { collection, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import ImagePickerComponent from '../components/ImagePickerComponent';
+import { uploadImage } from '../utils/imageUpload';
 
 const AddReviewScreen = ({ navigation, route }) => {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   const [image, setImage] = useState(null);
-  
+  const [uploading, setUploading] = useState(false);
+
   const { cafeId, cafeName } = route.params;
-  const { addReview } = useReviews();
+  
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'Please allow access to your photo library to add images.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
-    }
-  };
-
-  const handleSubmitReview = () => {
-    if (rating === 0) {
+  const handleSubmit = async () => {
+    if (!rating) {
       Alert.alert('Error', 'Please select a rating');
       return;
     }
 
-    if (review.trim().length < 3) {
-      Alert.alert('Error', 'Please write a review');
-      return;
+    setUploading(true);
+    try {
+      let photoUrl = null;
+      if (image) {
+        photoUrl = await uploadImage(image, `reviews/${auth.currentUser.uid}`);
+      }
+
+      const newReview = {
+        userId: auth.currentUser.uid,
+        email: auth.currentUser?.email,
+        cafeId,
+        cafeName,
+        rating,
+        review: review.trim(),
+        photoUrl,
+        date: new Date().toISOString(),
+      };
+
+      await addDoc(collection(database, 'reviews'), newReview);
+      Alert.alert('Success', `Your review for ${cafeName} has been posted!`);
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      Alert.alert('Error', 'Failed to submit review. Please try again.');
+    } finally {
+      setUploading(false);
     }
-
-    const newReview = {
-      id: Date.now().toString(),
-      author: 'You',
-      rating: rating,
-      date: new Date().toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      }),
-      content: review.trim(),
-      photoUrl: image,
-      cafeId: cafeId 
-    };
-
-    addReview(cafeId, newReview);
-    
-    Alert.alert(
-      'Success',
-      `Your review for ${cafeName} has been posted!`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack()
-        }
-      ]
-    );
   };
 
   return (
@@ -127,48 +101,21 @@ const AddReviewScreen = ({ navigation, route }) => {
       {/* Photo Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Add Photo</Text>
-        <TouchableOpacity 
-          style={styles.photoButton}
-          onPress={pickImage}
-        >
-          <Ionicons 
-            name="camera-outline" 
-            size={24} 
-            color={Colors.primary}
-          />
-          <Text style={styles.photoButtonText}>
-            Choose from gallery
-          </Text>
-        </TouchableOpacity>
-        
-        {image && (
-          <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: image }}
-              style={styles.imagePreview}
-            />
-            <TouchableOpacity 
-              style={styles.removeImageButton}
-              onPress={() => setImage(null)}
-            >
-              <Ionicons 
-                name="close-circle" 
-                size={24} 
-                color={Colors.error}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
+        <ImagePickerComponent
+          image={image}
+          onImagePick={setImage}
+          size={200}
+        />
       </View>
 
       {/* Submit Button */}
       <TouchableOpacity
         style={[
           styles.submitButton,
-          (!rating || !review.trim()) && styles.submitButtonDisabled
+          (!rating || !review.trim() || uploading) && styles.submitButtonDisabled
         ]}
-        onPress={handleSubmitReview}
-        disabled={!rating || !review.trim()}
+        onPress={handleSubmit}
+        disabled={!rating || !review.trim() || uploading}
       >
         <Text style={styles.submitButtonText}>Post Review</Text>
       </TouchableOpacity>

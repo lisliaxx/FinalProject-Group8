@@ -1,12 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useFavorites } from '../context/FavoritesContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { database } from '../Firebase/firebaseSetup';
 
 function CafeCard({ cafe, onPress }) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const isfav = isFavorite(cafe.id);
+  const [cafeRating, setCafeRating] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const reviewsRef = collection(database, 'reviews');
+        const q = query(reviewsRef, where('cafeId', '==', cafe.id));
+        const querySnapshot = await getDocs(q);
+        
+        const reviews = querySnapshot.docs.map(doc => doc.data());
+        const totalReviews = reviews.length;
+        
+        if (totalReviews > 0) {
+          const avgRating = (
+            reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
+          ).toFixed(1);
+          setCafeRating(avgRating);
+        }
+        
+        setReviewCount(totalReviews);
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+      }
+    };
+
+    fetchReviews();
+  }, [cafe.id]);
 
   const handleFavoritePress = (e) => {
     e.stopPropagation();
@@ -34,11 +64,11 @@ function CafeCard({ cafe, onPress }) {
         </View>
         <View style={styles.ratingContainer}>
           <Text style={styles.rating}>
-            {cafe.rating > 0 ? `★ ${cafe.rating}` : 'No ratings yet'}
+            {reviewCount > 0 ? `★ ${cafeRating}` : 'No ratings yet'}
           </Text>
-          {cafe.reviewCount > 0 && (
+          {reviewCount > 0 && (
             <Text style={styles.reviewCount}>
-              ({cafe.reviewCount} {cafe.reviewCount === 1 ? 'review' : 'reviews'})
+              ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
             </Text>
           )}
         </View>

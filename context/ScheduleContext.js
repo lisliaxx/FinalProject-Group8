@@ -1,5 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
+import { collection, addDoc, getDocs, deleteDoc, doc, where, query } from 'firebase/firestore';
+import { auth, database } from '../Firebase/firebaseSetup';
+import {  Alert } from 'react-native';
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -26,9 +29,33 @@ export const ScheduleProvider = ({ children }) => {
     requestPermissions();
   }, []);
 
+  const fetchSchedules = async (userId) => {
+    try {
+      const q = query(collection(database, 'schedules'), where('userId', '==', userId));
+      const querySnapshot = await getDocs(q);
+      const fetchedSchedules = {};
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const cafeId = data.cafeId;
+        if (!fetchedSchedules[cafeId]) fetchedSchedules[cafeId] = [];
+        fetchedSchedules[cafeId].push({ id: doc.id, ...data });
+      });
+      setSchedules(fetchedSchedules);
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+    }
+  };
+
   const addSchedule = async (cafeId, cafeName, date) => {
-    // Schedule notification
+    const userId = auth.currentUser.uid;
     const trigger = new Date(date);
+  
+    // Check if the selected date is in the future
+    if (trigger <= new Date()) {
+      Alert.alert('Invalid Date', 'Please select a future date and time for the visit.');
+      return false;
+    }
+  
     try {
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
@@ -38,16 +65,21 @@ export const ScheduleProvider = ({ children }) => {
         },
         trigger,
       });
-
-      // Save schedule
+  
+      const newSchedule = {
+        userId,
+        cafeId,
+        cafeName,
+        date: date.toISOString(),
+        notificationId,
+      };
+  
+      const docRef = await addDoc(collection(database, 'schedules'), newSchedule);
+  
       setSchedules(prev => ({
         ...prev,
-        [cafeId]: [
-          ...(prev[cafeId] || []),
-          { id: notificationId, date: date, cafeName }
-        ]
+        [cafeId]: [...(prev[cafeId] || []), { id: docRef.id, ...newSchedule }]
       }));
-
       return true;
     } catch (error) {
       console.error('Error scheduling notification:', error);
@@ -57,15 +89,16 @@ export const ScheduleProvider = ({ children }) => {
 
   const removeSchedule = async (cafeId, scheduleId) => {
     try {
-      await Notifications.cancelScheduledNotificationAsync(scheduleId);
-      
-      setSchedules(prev => ({
-        ...prev,
-        [cafeId]: (prev[cafeId] || []).filter(
-          schedule => schedule.id !== scheduleId
-        )
-      }));
+      const schedule = schedules[cafeId].find(s => s.id === scheduleId);
+      if (schedule) {
+        await Notifications.cancelScheduledNotificationAsync(schedule.notificationId);
+        await deleteDoc(doc(database, 'schedules', scheduleId));
 
+        setSchedules(prev => ({
+          ...prev,
+          [cafeId]: prev[cafeId].filter(schedule => schedule.id !== scheduleId)
+        }));
+      }
       return true;
     } catch (error) {
       console.error('Error removing schedule:', error);
@@ -76,6 +109,11 @@ export const ScheduleProvider = ({ children }) => {
   const getSchedulesForCafe = (cafeId) => {
     return schedules[cafeId] || [];
   };
+
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+    if (userId) fetchSchedules(userId);
+  }, [auth.currentUser]);
 
   return (
     <ScheduleContext.Provider value={{

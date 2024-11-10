@@ -1,18 +1,48 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { auth, database } from '../Firebase/firebaseSetup';
+import { doc, setDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
 
 const FavoritesContext = createContext();
 
 export const FavoritesProvider = ({ children }) => {
   const [favorites, setFavorites] = useState({});
+  const userId = auth.currentUser?.uid;
 
-  const toggleFavorite = (cafe) => {
-    setFavorites(prev => {
+    // Load initial favorites from Firestore
+    useEffect(() => {
+      const fetchFavorites = async () => {
+        if (!userId) return;
+  
+        const favoritesRef = collection(database, 'users', userId, 'favorites');
+        const favoriteDocs = await getDocs(favoritesRef);
+        const favoritesData = {};
+        favoriteDocs.forEach((doc) => {
+          favoritesData[doc.id] = doc.data();
+        });
+        setFavorites(favoritesData);
+      };
+  
+      fetchFavorites();
+    }, [userId]);
+
+  const toggleFavorite = async (cafe) => {
+    if (!userId) return;
+
+    const cafeRef = doc(database, 'users', userId, 'favorites', cafe.id);
+
+    // Update Firestore and local state
+    setFavorites((prev) => {
+      const updatedFavorites = { ...prev };
       if (prev[cafe.id]) {
-        const { [cafe.id]: removed, ...rest } = prev;
-        return rest;
+        // Remove from Firestore and local state
+        deleteDoc(cafeRef);
+        delete updatedFavorites[cafe.id];
       } else {
-        return { ...prev, [cafe.id]: cafe };
+        // Add to Firestore and local state
+        setDoc(cafeRef, cafe);
+        updatedFavorites[cafe.id] = cafe;
       }
+      return updatedFavorites;
     });
   };
 

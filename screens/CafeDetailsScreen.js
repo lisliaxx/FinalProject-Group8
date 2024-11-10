@@ -1,20 +1,26 @@
-import React, { useState, useLayoutEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useLayoutEffect, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useReviews } from '../context/ReviewContext';
 import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
+import { database, auth, storage } from '../Firebase/firebaseSetup'; 
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId, editReview, deleteReview } = useReviews();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
-  
+  const [cafeReviews, setCafeReviews] = useState([]); 
+  const [averageRating, setAverageRating] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+
   const cafe = route.params?.cafe;
   const cafeId = cafe?.id;
-  const cafeReviews = getReviewsByCafeId(cafeId);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -33,70 +39,168 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     });
   }, [navigation]);
 
+    useEffect(() => {
+      const fetchReviews = async () => {
+        try {
+          const reviewsRef = collection(database, 'reviews');
+          const q = query(
+            reviewsRef,
+            where('cafeId', '==', cafe.id),
+            orderBy('date', 'desc')
+          );
+          
+          const querySnapshot = await getDocs(q);
+          const reviews = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          console.log('Fetched reviews:', reviews);
+          setCafeReviews(reviews);
+        } catch (error) {
+          console.error('Error fetching reviews:', error);
+          Alert.alert('Error', 'Failed to load reviews');
+        }
+      }
+
+      fetchReviews();
+    }, [cafeId]);
+
+  useEffect(() => {
+    if (cafeReviews.length > 0) {
+      const total = cafeReviews.reduce((sum, review) => sum + review.rating, 0);
+      const avg = total / cafeReviews.length;
+      setAverageRating(avg);
+    }
+  }, [cafeReviews]);
+
   const handleEditReview = (review) => {
-    if (review.author === 'You') {
+    if (auth.currentUser?.uid === review.userId) {
       setEditingReview(review);
     }
   };
 
-  const handleDeleteReview = (reviewId) => {
-    deleteReview(cafeId, reviewId);
+  const handleDeleteReview = async (reviewId) => {
+    try {
+      await deleteDoc(doc(database, 'reviews', reviewId));
+      setCafeReviews(prevReviews => prevReviews.filter(review => review.id !== reviewId));
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      Alert.alert('Error', 'Failed to delete review');
+    }
   };
 
   const handleSaveEdit = (updatedReview) => {
-    editReview(cafeId, updatedReview);
+    const updatedReviews = cafeReviews.map(review => 
+      review.id === updatedReview.id ? updatedReview : review
+    );
+    setCafeReviews(updatedReviews);
     setEditingReview(null);
+    Alert.alert("Success", "Review updated successfully.");
   };
 
+  const handleEditPress = (reviewItem) => {
+    setEditingReview(reviewItem);
+  };
+
+  const renderReview = (review) => {
+    return (
+      <View key={review.id} style={styles.reviewItem}>
+        {review.userId === auth.currentUser?.uid && (
+          <TouchableOpacity 
+            onPress={() => handleEditPress(review)}
+            style={styles.editButton}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const cafeDoc = await getDoc(doc(database, 'cafes', cafe.id));
+      if (cafeDoc.exists()) {
+        setCafe({ id: cafeDoc.id, ...cafeDoc.data() });
+      }
+
+      const reviewsRef = collection(database, 'reviews');
+      const q = query(reviewsRef, where('cafeId', '==', cafe.id), orderBy('date', 'desc'));
+      const querySnapshot = await getDocs(q);
+      const fetchedReviews = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setCafeReviews(fetchedReviews);
+
+      if (fetchedReviews.length > 0) {
+        const total = fetchedReviews.reduce((sum, review) => sum + review.rating, 0);
+        setAverageRating(total / fetchedReviews.length);
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      Alert.alert('Error', 'Failed to refresh data');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [cafe?.id]);
+
   return (
-    <>
-      <ScrollView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.name}>{cafe?.name}</Text>
-          <View style={styles.ratingRow}>
-            <Text style={styles.rating}>★ {cafeReviews.length > 0 
-              ? (cafeReviews.reduce((sum, review) => sum + review.rating, 0) / cafeReviews.length).toFixed(1)
-              : '0'}</Text>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+      >
+        {/* Cafe Info Section */}
+        <View style={styles.cafeInfo}>
+          <Text style={styles.cafeName}>{cafe.name}</Text>
+          <View style={styles.ratingContainer}>
+            <Text style={styles.ratingText}>★ {averageRating ? averageRating.toFixed(1) : 'N/A'}</Text>
             <Text style={styles.reviewCount}>({cafeReviews.length} reviews)</Text>
           </View>
         </View>
 
+        {/* Address Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Address</Text>
-          <Text>{cafe?.address}</Text>
+          <Text style={styles.sectionContent}>{cafe.address}</Text>
         </View>
 
+        {/* Hours Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hours</Text>
-          <Text>{cafe?.hours || '8:00 AM - 8:00 PM'}</Text>
+          <Text style={styles.sectionContent}>{cafe.hours}</Text>
         </View>
 
+        {/* Features Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Features</Text>
           <View style={styles.featuresContainer}>
-            {cafe?.features?.petFriendly && (
-              <View style={styles.featureItem}>
-                <Text style={styles.featureText}>🐾 Pet Friendly</Text>
-              </View>
-            )}
-            {cafe?.features?.hasParking && (
-              <View style={styles.featureItem}>
-                <Text style={styles.featureText}>🚗 Parking Available</Text>
-              </View>
-            )}
-            {cafe?.features?.wheelchairAccessible && (
-              <View style={styles.featureItem}>
-                <Text style={styles.featureText}>♿ Wheelchair Accessible</Text>
-              </View>
-            )}
-            {cafe?.features?.hasWifi && (
-              <View style={styles.featureItem}>
-                <Text style={styles.featureText}>📶 Free WiFi</Text>
-              </View>
-            )}
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>🐾 Pet Friendly</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>🅿️ Parking Available</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>♿️ Wheelchair Accessible</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Text style={styles.featureText}>📶 Free WiFi</Text>
+            </View>
           </View>
         </View>
 
+        {/* Reviews Section */}
         <View style={styles.section}>
           <View style={styles.reviewsHeader}>
             <Text style={styles.sectionTitle}>Reviews</Text>
@@ -110,41 +214,32 @@ const CafeDetailsScreen = ({ route, navigation }) => {
               <Text style={styles.addReviewText}>+ Add Review</Text>
             </TouchableOpacity>
           </View>
-          
-          <View style={styles.reviewsList}>
-            {cafeReviews.length > 0 ? (
-              cafeReviews.map((review) => (
-                <ReviewItem 
-                  key={review.id} 
-                  review={review}
-                  onEdit={handleEditReview}
-                  onDelete={review.author === 'You' ? handleDeleteReview : undefined}
-                />
-              ))
-            ) : (
-              <Text style={styles.noReviewsText}>
-                No reviews yet. Be the first to review!
-              </Text>
-            )}
-          </View>
+
+          {cafeReviews.map((review) => (
+            <ReviewItem
+              key={review.id}
+              review={review}
+              isEditable={review.userId === auth.currentUser?.uid}
+              onEdit={setEditingReview}
+              onDelete={handleDeleteReview}
+            />
+          ))}
         </View>
       </ScrollView>
 
+      {/* Modals */}
       <ScheduleModal
         visible={showScheduleModal}
         onClose={() => setShowScheduleModal(false)}
         cafe={cafe}
       />
-
-      {editingReview && (
-        <EditReviewModal
-          visible={!!editingReview}
-          review={editingReview}
-          onClose={() => setEditingReview(null)}
-          onSave={handleSaveEdit}
-        />
-      )}
-    </>
+      <EditReviewModal
+        isVisible={!!editingReview}
+        onClose={() => setEditingReview(null)}
+        review={editingReview}
+        onSave={handleEditReview}
+      />
+    </GestureHandlerRootView>
   );
 };
 
@@ -153,144 +248,43 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  header: {
+  cafeInfo: {
     padding: 16,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    backgroundColor: Colors.white,
   },
-  headerButton: {
-    marginRight: 16,
-    padding: 8,
-  },
-  name: {
+  cafeName: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
     color: Colors.textPrimary,
+    marginBottom: 8,
   },
-  scheduleButton: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: 8,
-    backgroundColor: Colors.surface,
-    alignSelf: 'flex-start',
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  rating: {
+  ratingText: {
     fontSize: 18,
     color: Colors.rating,
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: Colors.primary,
-  },
-  reviewsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  addReviewButton: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  addReviewText: {
-    color: Colors.white,
-    fontWeight: '600',
-  },
-  reviewsList: {
-    gap: 16,
-  },
-  reviewItem: {
-    backgroundColor: Colors.surface,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: Colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  reviewerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  authorName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  date: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  reviewRating: {
-    color: Colors.rating,
-    fontSize: 16,
-  },
-  reviewText: {
-    fontSize: 14,
-    color: Colors.textPrimary,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  reviewImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginRight: 8,
   },
   reviewCount: {
-    marginLeft: 8,
-    fontSize: 14,
+    fontSize: 16,
     color: Colors.textSecondary,
   },
-  noReviewsText: {
-    textAlign: 'center',
-    color: Colors.textSecondary,
-    fontSize: 16,
-    padding: 20,
+  section: {
+    backgroundColor: Colors.white,
+    padding: 16,
+    marginTop: 8,
   },
-  unfilledStars: {
-    color: Colors.border,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
+  sectionContent: {
     fontSize: 16,
+    color: Colors.textPrimary,
   },
   featuresContainer: {
     flexDirection: 'row',
@@ -300,11 +294,9 @@ const styles = StyleSheet.create({
   },
   featureItem: {
     backgroundColor: Colors.surface,
-    borderRadius: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 8,
-    marginBottom: 8,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -312,8 +304,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textPrimary,
   },
-  ratingContainer: {
+  reviewsHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addReviewButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  addReviewText: {
+    color: Colors.white,
+    fontWeight: '500',
   },
 });
 
