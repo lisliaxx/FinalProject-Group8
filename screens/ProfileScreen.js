@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -31,6 +31,23 @@ const ProfileScreen = ({ navigation }) => {
   useEffect(() => {
     fetchUserProfile();
   }, []);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity 
+          style={{ marginRight: 16 }}
+          onPress={handleLogout}
+        >
+          <Ionicons 
+            name="log-out-outline" 
+            size={24} 
+            color={Colors.textLight} 
+          />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
 
   const fetchUserProfile = async () => {
     try {
