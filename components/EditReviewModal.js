@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
@@ -21,20 +22,44 @@ import { uploadImage } from '../utils/imageUpload';
 const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (review) {
       setRating(review.rating);
       setReviewText(review.review);
-      setImage(review.photoUrl);
+      if (review.photoUrls) {
+        setImages(review.photoUrls);
+      } else if (review.photoUrl) {
+        setImages(review.photoUrl ? [review.photoUrl] : []);
+      } else {
+        setImages([]);
+      }
     }
   }, [review]);
 
-  if (!review) {
-    return null;
-  }
+  const handleAddImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImages(prevImages => [...prevImages, result.assets[0].uri]);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleDeleteImage = (index) => {
+    setImages(prevImages => prevImages.filter((_, i) => i !== index));
+  };
 
   const handleSave = async () => {
     if (!rating) {
@@ -42,29 +67,24 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
       return;
     }
 
-    if (!review) {
-      Alert.alert('Error', 'Review data not found');
-      return;
-    }
-
     setIsUploading(true);
     try {
-      let photoUrl = null;
-      
-      if (image) {
-        if (!image.startsWith('http')) {
-          photoUrl = await uploadImage(image, `reviews/${auth.currentUser.uid}`);
-        } else {
-          photoUrl = image;
-        }
-      }
+      const uploadedUrls = await Promise.all(
+        images.map(async (image) => {
+          if (image.startsWith('http')) {
+            return image;
+          }
+          return await uploadImage(image, `reviews/${auth.currentUser.uid}`);
+        })
+      );
 
       const updatedReview = {
         cafeId: review.cafeId,
         cafeName: review.cafeName,
         date: new Date().toISOString(),
         email: auth.currentUser.email,
-        photoUrl: photoUrl,
+        photoUrl: uploadedUrls[0] || null,
+        photoUrls: uploadedUrls,
         rating: rating,
         review: reviewText.trim(),
         userId: auth.currentUser.uid
@@ -82,28 +102,6 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
     }
   };
 
-  const handleDeleteImage = () => {
-    setImage(null);
-  };
-
-  const handleAddImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
-    }
-  };
-
   return (
     <Modal
       visible={isVisible}
@@ -112,7 +110,7 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
       onRequestClose={onClose}
     >
       <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
+        <ScrollView style={styles.modalContent}>
           <Text style={styles.modalTitle}>Edit Review</Text>
           
           <View style={styles.ratingContainer}>
@@ -145,29 +143,36 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
             />
           </View>
 
-          <View style={styles.imageSection}>
-            {image ? (
-              <View style={styles.imageContainer}>
-                <Image
-                  source={{ uri: image }}
-                  style={styles.reviewImage}
-                />
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => setImage(null)}
-                >
-                  <Ionicons name="close-circle" size={24} color={Colors.error} />
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            <TouchableOpacity
-              style={styles.addImageButton}
-              onPress={handleAddImage}
+          <View style={styles.imagesSection}>
+            <Text style={styles.label}>Photos:</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.imageScroll}
             >
-              <Ionicons name="camera" size={30} color={Colors.textSecondary} />
-              <Text style={styles.addImageText}>Add Photo</Text>
-            </TouchableOpacity>
+              {images.map((image, index) => (
+                <View key={index} style={styles.imageContainer}>
+                  <Image
+                    source={{ uri: image }}
+                    style={styles.reviewImage}
+                  />
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteImage(index)}
+                  >
+                    <Ionicons name="close-circle" size={24} color={Colors.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              
+              <TouchableOpacity
+                style={styles.addImageButton}
+                onPress={handleAddImage}
+              >
+                <Ionicons name="camera" size={30} color={Colors.textSecondary} />
+                <Text style={styles.addImageText}>Add Photo</Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
 
           <View style={styles.buttonContainer}>
@@ -184,7 +189,7 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
               <Text style={styles.buttonText}>Save</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -256,17 +261,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  imageSection: {
+  imagesSection: {
     marginVertical: 16,
-    alignItems: 'center',
+  },
+  imageScroll: {
+    flexDirection: 'row',
+    marginTop: 8,
   },
   imageContainer: {
+    marginRight: 12,
     position: 'relative',
-    marginBottom: 16,
   },
   reviewImage: {
-    width: 200,
-    height: 200,
+    width: 120,
+    height: 120,
     borderRadius: 8,
   },
   deleteButton: {
@@ -282,21 +290,20 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   addImageButton: {
-    width: 200,
-    height: 50,
+    width: 120,
+    height: 120,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.border,
     borderStyle: 'dashed',
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.surface,
   },
   addImageText: {
-    marginLeft: 8,
+    marginTop: 8,
     color: Colors.textSecondary,
-    fontSize: 16,
+    fontSize: 14,
   },
   buttonContainer: {
     flexDirection: 'row',
