@@ -8,6 +8,7 @@ export default function Signup({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState([]);
 
   // Function to validate email format
   const isValidEmail = (email) => {
@@ -17,7 +18,40 @@ export default function Signup({ navigation }) {
 
   // Function to validate password requirements
   const isValidPassword = (password) => {
-    return password.length >= 6; // Ensuring minimum length of 6 characters
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    return minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecial;
+  };
+
+  const getPasswordErrors = (password) => {
+    const errors = [];
+    
+    if (password.length < 8) {
+      errors.push('• At least 8 characters long');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('• One uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('• One lowercase letter');
+    }
+    if (!/\d/.test(password)) {
+      errors.push('• One number');
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      errors.push('• One special character (!@#$%^&*(),.?":{}|<>)');
+    }
+    
+    return errors;
+  };
+
+  const handlePasswordChange = (text) => {
+    setPassword(text);
+    setPasswordErrors(getPasswordErrors(text));
   };
 
   const handleSignup = async () => {
@@ -27,10 +61,9 @@ export default function Signup({ navigation }) {
       return;
     }
 
-    // Check if password meets requirements
+    // Check password requirements
     if (!isValidPassword(password)) {
-      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
-      return;
+      return; 
     }
 
     // Check if passwords match
@@ -75,11 +108,17 @@ export default function Signup({ navigation }) {
         <TextInput
           placeholder="Password"
           value={password}
-          onChangeText={(text) => setPassword(text)}
+          onChangeText={handlePasswordChange}
           style={styles.input}
           secureTextEntry
           placeholderTextColor={Colors.textSecondary}
         />
+        {passwordErrors.length > 0 && (
+          <Text style={styles.passwordHint}>
+            Password must contain:{'\n'}
+            {passwordErrors.join('\n')}
+          </Text>
+        )}
         <TextInput
           placeholder="Confirm Password"
           value={confirmPassword}
@@ -89,9 +128,6 @@ export default function Signup({ navigation }) {
           placeholderTextColor={Colors.textSecondary}
         />
         
-        <Text style={styles.passwordHint}>
-          Password must be at least 6 characters long
-        </Text>
         
         <TouchableOpacity 
           style={styles.signupButton}
@@ -150,7 +186,9 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     marginBottom: 16,
-    textAlign: 'center',
+    lineHeight: 20,
+    textAlign: 'left',
+    paddingHorizontal: 16,
   },
   signupButton: {
     backgroundColor: Colors.primary,
