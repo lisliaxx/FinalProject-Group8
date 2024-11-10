@@ -7,7 +7,7 @@ import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
 import { database, auth, storage } from '../Firebase/firebaseSetup'; 
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
@@ -40,17 +40,23 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       const fetchReviews = async () => {
         try {
           const reviewsRef = collection(database, 'reviews');
-          const q = query(reviewsRef, where('cafeId', '==', cafeId));
+          const q = query(
+            reviewsRef,
+            where('cafeId', '==', cafe.id),
+            orderBy('date', 'desc')
+          );
+          
           const querySnapshot = await getDocs(q);
-
           const reviews = querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
           
+          console.log('Fetched reviews:', reviews);
           setCafeReviews(reviews);
         } catch (error) {
-          Alert.alert("Error", "Failed to load reviews.");
+          console.error('Error fetching reviews:', error);
+          Alert.alert('Error', 'Failed to load reviews');
         }
       }
 
@@ -97,6 +103,25 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     setCafeReviews(updatedReviews);
     setEditingReview(null);
     Alert.alert("Success", "Review updated successfully.");
+  };
+
+  const handleEditPress = (reviewItem) => {
+    setEditingReview(reviewItem);
+  };
+
+  const renderReview = (review) => {
+    return (
+      <View key={review.id} style={styles.reviewItem}>
+        {review.userId === auth.currentUser?.uid && (
+          <TouchableOpacity 
+            onPress={() => handleEditPress(review)}
+            style={styles.editButton}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -189,10 +214,16 @@ const CafeDetailsScreen = ({ route, navigation }) => {
 
       {editingReview && (
         <EditReviewModal
-          visible={!!editingReview}
-          reviewId={editingReview.id}
+          isVisible={editingReview !== null}
           onClose={() => setEditingReview(null)}
-          onSave={handleSaveEdit}
+          review={editingReview}
+          onSave={(updatedReview) => {
+            const updatedReviews = cafeReviews.map(r => 
+              r.id === updatedReview.id ? updatedReview : r
+            );
+            setCafeReviews(updatedReviews);
+            setEditingReview(null);
+          }}
         />
       )}
     </>

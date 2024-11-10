@@ -16,6 +16,8 @@ import { useReviews } from '../context/ReviewContext';
 import { database, auth, storage } from '../Firebase/firebaseSetup'; 
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import ImagePickerComponent from '../components/ImagePickerComponent';
+import { uploadImage } from '../utils/imageUpload';
 
 const AddReviewScreen = ({ navigation, route }) => {
   const [rating, setRating] = useState(0);
@@ -26,113 +28,19 @@ const AddReviewScreen = ({ navigation, route }) => {
   const { cafeId, cafeName } = route.params;
   
 
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photo library.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.5,
-        maxWidth: 1000,
-        maxHeight: 1000,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImage(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
-    }
-  };
-
-  const uploadImageAsync = async (uri) => {
-    const blob = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = function () {
-        resolve(xhr.response);
-      };
-      xhr.onerror = function (e) {
-        console.log('XHR error:', e);
-        reject(new Error('Network request failed'));
-      };
-      xhr.responseType = 'blob';
-      xhr.open('GET', uri, true);
-      xhr.send(null);
-    });
-
-    try {
-      const fileRef = ref(storage, `reviews/${auth.currentUser.uid}_${Date.now()}.jpg`);
-      await uploadBytes(fileRef, blob);
-      blob.close(); // Important: close the blob when done
-
-      return await getDownloadURL(fileRef);
-    } catch (error) {
-      console.error('Storage error:', error);
-      throw error;
-    }
-  };
-
-  const handleSubmitReview = async () => {
-    if (rating === 0 || review.trim().length < 3) {
-      Alert.alert('Error', 'Please complete the review and rating.');
+  const handleSubmit = async () => {
+    if (!rating) {
+      Alert.alert('Error', 'Please select a rating');
       return;
     }
 
     setUploading(true);
-
     try {
-      let imageUrl = null;
-      
+      let photoUrl = null;
       if (image) {
-        console.log('Starting image upload...');
-        try {
-          imageUrl = await uploadImageAsync(image);
-          console.log('Image uploaded successfully:', imageUrl);
-        } catch (imageError) {
-          console.error('Image upload failed:', imageError);
-          Alert.alert(
-            'Warning',
-            'Failed to upload image, but we can still post your review without it. Would you like to continue?',
-            [
-              {
-                text: 'Cancel',
-                onPress: () => {
-                  setUploading(false);
-                  return;
-                },
-                style: 'cancel',
-              },
-              {
-                text: 'Continue',
-                onPress: async () => {
-                  await submitReviewToFirestore(null);
-                },
-              },
-            ]
-          );
-          return;
-        }
+        photoUrl = await uploadImage(image, `reviews/${auth.currentUser.uid}`);
       }
 
-      await submitReviewToFirestore(imageUrl);
-    } catch (error) {
-      console.error('Review submission error:', error);
-      Alert.alert('Error', 'Failed to submit review. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const submitReviewToFirestore = async (imageUrl) => {
-    try {
       const newReview = {
         userId: auth.currentUser.uid,
         email: auth.currentUser?.email,
@@ -140,23 +48,18 @@ const AddReviewScreen = ({ navigation, route }) => {
         cafeName,
         rating,
         review: review.trim(),
-        photoUrl: imageUrl,
+        photoUrl,
         date: new Date().toISOString(),
       };
 
-      console.log('Submitting review to Firestore:', newReview);
-      
-      const docRef = await addDoc(collection(database, 'reviews'), newReview);
-      console.log('Review submitted successfully, doc ID:', docRef.id);
-      
-      Alert.alert(
-        'Success',
-        `Your review for ${cafeName} has been posted!`,
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
-      );
+      await addDoc(collection(database, 'reviews'), newReview);
+      Alert.alert('Success', `Your review for ${cafeName} has been posted!`);
+      navigation.goBack();
     } catch (error) {
-      console.error('Firestore submission error:', error);
-      throw error;
+      console.error('Error submitting review:', error);
+      Alert.alert('Error', 'Failed to submit review. Please try again.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -198,38 +101,11 @@ const AddReviewScreen = ({ navigation, route }) => {
       {/* Photo Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Add Photo</Text>
-        <TouchableOpacity 
-          style={styles.photoButton}
-          onPress={pickImage}
-        >
-          <Ionicons 
-            name="camera-outline" 
-            size={24} 
-            color={Colors.primary}
-          />
-          <Text style={styles.photoButtonText}>
-            Choose from gallery
-          </Text>
-        </TouchableOpacity>
-        
-        {image && (
-          <View style={styles.imagePreviewContainer}>
-            <Image
-              source={{ uri: image }}
-              style={styles.imagePreview}
-            />
-            <TouchableOpacity 
-              style={styles.removeImageButton}
-              onPress={() => setImage(null)}
-            >
-              <Ionicons 
-                name="close-circle" 
-                size={24} 
-                color={Colors.error}
-              />
-            </TouchableOpacity>
-          </View>
-        )}
+        <ImagePickerComponent
+          image={image}
+          onImagePick={setImage}
+          size={200}
+        />
       </View>
 
       {/* Submit Button */}
@@ -238,7 +114,7 @@ const AddReviewScreen = ({ navigation, route }) => {
           styles.submitButton,
           (!rating || !review.trim() || uploading) && styles.submitButtonDisabled
         ]}
-        onPress={handleSubmitReview}
+        onPress={handleSubmit}
         disabled={!rating || !review.trim() || uploading}
       >
         <Text style={styles.submitButtonText}>Post Review</Text>
