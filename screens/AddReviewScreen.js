@@ -27,39 +27,57 @@ const AddReviewScreen = ({ navigation, route }) => {
   
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'Please allow access to your photo library to add images.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photo library.');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 0.5,
+        maxWidth: 1000,
+        maxHeight: 1000,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setImage(result.assets[0].uri);
       }
     } catch (error) {
+      console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
   const uploadImageAsync = async (uri) => {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const imageRef = ref(storage, `reviews/${auth.currentUser.uid}/${Date.now()}`);
-    await uploadBytes(imageRef, blob);
-    return await getDownloadURL(imageRef);
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = function () {
+        resolve(xhr.response);
+      };
+      xhr.onerror = function (e) {
+        console.log('XHR error:', e);
+        reject(new Error('Network request failed'));
+      };
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
+
+    try {
+      const fileRef = ref(storage, `reviews/${auth.currentUser.uid}_${Date.now()}.jpg`);
+      await uploadBytes(fileRef, blob);
+      blob.close(); // Important: close the blob when done
+
+      return await getDownloadURL(fileRef);
+    } catch (error) {
+      console.error('Storage error:', error);
+      throw error;
+    }
   };
 
   const handleSubmitReview = async () => {
@@ -69,18 +87,55 @@ const AddReviewScreen = ({ navigation, route }) => {
     }
 
     setUploading(true);
-    let imageUrl = null;
 
     try {
+      let imageUrl = null;
+      
       if (image) {
-        imageUrl = await uploadImageAsync(image); // Upload image to Firebase Storage
+        console.log('Starting image upload...');
+        try {
+          imageUrl = await uploadImageAsync(image);
+          console.log('Image uploaded successfully:', imageUrl);
+        } catch (imageError) {
+          console.error('Image upload failed:', imageError);
+          Alert.alert(
+            'Warning',
+            'Failed to upload image, but we can still post your review without it. Would you like to continue?',
+            [
+              {
+                text: 'Cancel',
+                onPress: () => {
+                  setUploading(false);
+                  return;
+                },
+                style: 'cancel',
+              },
+              {
+                text: 'Continue',
+                onPress: async () => {
+                  await submitReviewToFirestore(null);
+                },
+              },
+            ]
+          );
+          return;
+        }
       }
 
-      const userEmail = auth.currentUser?.email;
+      await submitReviewToFirestore(imageUrl);
+    } catch (error) {
+      console.error('Review submission error:', error);
+      Alert.alert('Error', 'Failed to submit review. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
+  const submitReviewToFirestore = async (imageUrl) => {
+    try {
       const newReview = {
         userId: auth.currentUser.uid,
-        email: userEmail,
+        email: auth.currentUser?.email,
         cafeId,
         cafeName,
         rating,
@@ -89,14 +144,19 @@ const AddReviewScreen = ({ navigation, route }) => {
         date: new Date().toISOString(),
       };
 
-      await addDoc(collection(database, 'reviews'), newReview);
-
-      Alert.alert('Success', `Your review for ${cafeName} has been posted!`);
-      navigation.goBack();
+      console.log('Submitting review to Firestore:', newReview);
+      
+      const docRef = await addDoc(collection(database, 'reviews'), newReview);
+      console.log('Review submitted successfully, doc ID:', docRef.id);
+      
+      Alert.alert(
+        'Success',
+        `Your review for ${cafeName} has been posted!`,
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
     } catch (error) {
-      Alert.alert('Error', 'Failed to submit review. Please try again.');
-    } finally {
-      setUploading(false);
+      console.error('Firestore submission error:', error);
+      throw error;
     }
   };
 

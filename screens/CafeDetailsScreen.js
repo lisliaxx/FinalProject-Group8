@@ -7,7 +7,7 @@ import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
 import { database, auth, storage } from '../Firebase/firebaseSetup'; 
-import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
@@ -36,20 +36,13 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     });
   }, [navigation]);
 
-    // Fetch reviews from Firestore that match the cafeId and the current user's uid
     useEffect(() => {
-      const fetchUserReviews = async () => {
+      const fetchReviews = async () => {
         try {
-          const userId = auth.currentUser?.uid;
-          if (!userId) {
-            Alert.alert("Error", "User is not logged in.");
-            return;
-          }
-  
           const reviewsRef = collection(database, 'reviews');
-          const q = query(reviewsRef, where('cafeId', '==', cafeId), where('userId', '==', userId));
+          const q = query(reviewsRef, where('cafeId', '==', cafeId));
           const querySnapshot = await getDocs(q);
-  
+
           const reviews = querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -61,19 +54,30 @@ const CafeDetailsScreen = ({ route, navigation }) => {
         }
       }
 
-      fetchUserReviews();
+      fetchReviews();
     }, [cafeId]);
 
   const handleEditReview = (review) => {
+    if (auth.currentUser?.uid === review.userId) {
       setEditingReview(review);
+    }
   };
 
   const handleDeleteReview = async (reviewId, photoUrl) => {
     try {
-      // Delete the review document from Firestore
+      const reviewDoc = await getDoc(doc(database, 'reviews', reviewId));
+      if (!reviewDoc.exists()) {
+        Alert.alert("Error", "Review not found.");
+        return;
+      }
+
+      if (reviewDoc.data().userId !== auth.currentUser?.uid) {
+        Alert.alert("Error", "You don't have permission to delete this review.");
+        return;
+      }
+
       await deleteDoc(doc(database, 'reviews', reviewId));
       
-      // If there's a photo URL, delete the image from Firebase Storage
       if (photoUrl) {
         const imageRef = ref(storage, photoUrl);
         await deleteObject(imageRef);

@@ -10,7 +10,11 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
 
   const currentUser = auth.currentUser;
 
+  const isOwner = currentUser?.uid === review.userId;
+
   const handleDelete = () => {
+    if (!isOwner) return;
+    
     Alert.alert(
       "Delete Review",
       "Are you sure you want to delete this review?",
@@ -33,6 +37,8 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
   };
 
   const renderRightActions = () => {
+    if (!isOwner) return null;
+
     return (
       <TouchableOpacity
         style={styles.deleteAction}
@@ -51,17 +57,17 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
     >
       <TouchableOpacity 
         style={styles.reviewItem}
-        onPress={() => onEdit && onEdit(review)}
+        onPress={() => isOwner && onEdit && onEdit(review)}
       >
         <View style={styles.reviewHeader}>
           <View style={styles.reviewerInfo}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{review?.author?.[0] || 'U'}</Text>
+              <Text style={styles.avatarText}>{review?.email?.[0] || 'U'}</Text>
             </View>
             <View>
-              <Text style={styles.authorName}>{currentUser?.email || 'Unknown'}</Text>
+              <Text style={styles.authorName}>{review?.email || 'Unknown'}</Text>
               <Text style={styles.date}>
-                {review?.date|| 'N/A'}
+                {review?.date || 'N/A'}
                 {review?.edited && ' (edited)'}
               </Text>
             </View>
