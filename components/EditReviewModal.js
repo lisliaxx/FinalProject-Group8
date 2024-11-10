@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,40 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import * as ImagePicker from 'expo-image-picker';
+import { storage, database } from '../Firebase/firebaseSetup'; 
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
-const EditReviewModal = ({ visible, onClose, review, onSave }) => {
-  const [rating, setRating] = useState(review.rating);
-  const [content, setContent] = useState(review.content);
-  const [image, setImage] = useState(review.photoUrl);
+const EditReviewModal = ({ visible, onClose, reviewId, onSave }) => {
+  const [rating, setRating] = useState(0);
+  const [content, setContent] = useState('');
+  const [image, setImage] = useState(null);
+
+    // Fetch review data from Firebase Firestore
+    useEffect(() => {
+      if (visible && reviewId) {
+        const fetchReview = async () => {
+          try {
+            console.log("Fetching review data...");
+            const reviewDocRef = doc(database, 'reviews', reviewId);
+            const reviewSnap = await getDoc(reviewDocRef);
+            if (reviewSnap.exists()) {
+              const reviewData = reviewSnap.data();
+              console.log("Review data fetched:", reviewData);
+              setRating(reviewData.rating);
+              setContent(reviewData.review);
+              setImage(reviewData.photoUrl);
+            } else {
+              Alert.alert("Error", "Review not found.");
+            }
+          } catch (error) {
+            Alert.alert("Error", "Failed to load review data.");
+          }
+        };
+  
+        fetchReview();
+      }
+    }, [visible, reviewId]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -39,28 +68,62 @@ const EditReviewModal = ({ visible, onClose, review, onSave }) => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImage(result.assets[0].uri);
+        const imageUri = result.assets[0].uri;
+  
+        // Upload image to Firebase Storage
+        const response = await fetch(imageUri);
+        const blob = await response.blob();
+        const imageRef = ref(storage, `reviews/${reviewId}_${Date.now()}.jpg`);
+        await uploadBytes(imageRef, blob);
+  
+        // Get the download URL
+        const downloadUrl = await getDownloadURL(imageRef);
+        setImage(downloadUrl);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image');
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!content.trim()) {
       Alert.alert('Error', 'Review content cannot be empty');
       return;
     }
-
-    onSave({
-      ...review,
+  
+    let updatedPhotoUrl = image; // Start with the current image URL
+  
+    // If a new image was picked, upload it to Firebase Storage
+    if (image && image.startsWith('file://')) {
+      try {
+        const response = await fetch(image);
+        const blob = await response.blob();
+        const imageRef = ref(storage, `reviews/${reviewId}_${Date.now()}.jpg`);
+        await uploadBytes(imageRef, blob);
+        updatedPhotoUrl = await getDownloadURL(imageRef); // Get the new URL
+      } catch (error) {
+        Alert.alert("Error", "Failed to upload new image.");
+        return;
+      }
+    }
+  
+    const updatedReview = {
       rating,
-      content: content.trim(),
-      photoUrl: image,
+      review: content.trim(),
+      photoUrl: updatedPhotoUrl, // Use the new or existing URL
       edited: true,
-      editedAt: new Date().toISOString(),
-    });
-    onClose();
+      date: new Date().toISOString(),
+    };
+  
+    try {
+      const reviewDocRef = doc(database, 'reviews', reviewId);
+      await updateDoc(reviewDocRef, updatedReview); // Update Firestore with the edited review
+      onSave({ ...updatedReview, id: reviewId }); // Pass updated review back to parent
+      onClose(); // Close modal after saving
+      Alert.alert("Success", "Review updated successfully.");
+    } catch (error) {
+      Alert.alert("Error", "Failed to update review.");
+    }
   };
 
   return (

@@ -51,7 +51,7 @@ const ReviewItem = ({ review, onEdit, onDelete }) => {
     >
       <TouchableOpacity 
         style={styles.reviewItem}
-        onPress={() => review?.author === 'You' && onEdit(review)}
+        onPress={() => onEdit && onEdit(review)}
       >
         <View style={styles.reviewHeader}>
           <View style={styles.reviewerInfo}>

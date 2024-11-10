@@ -7,7 +7,7 @@ import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
 import { database, auth, storage } from '../Firebase/firebaseSetup'; 
-import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
@@ -59,15 +59,13 @@ const CafeDetailsScreen = ({ route, navigation }) => {
         } catch (error) {
           Alert.alert("Error", "Failed to load reviews.");
         }
-      };
-  
+      }
+
       fetchUserReviews();
     }, [cafeId]);
 
   const handleEditReview = (review) => {
-    if (review.author === 'You') {
       setEditingReview(review);
-    }
   };
 
   const handleDeleteReview = async (reviewId, photoUrl) => {
@@ -94,6 +92,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     );
     setCafeReviews(updatedReviews);
     setEditingReview(null);
+    Alert.alert("Success", "Review updated successfully.");
   };
 
   return (
@@ -165,7 +164,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
                 <ReviewItem 
                   key={review.id} 
                   review={review}
-                  onEdit={handleEditReview}
+                  onEdit={() => handleEditReview(review)}
                   onDelete={() => handleDeleteReview(review.id, review.photoUrl)}
                 />
               ))
@@ -187,7 +186,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       {editingReview && (
         <EditReviewModal
           visible={!!editingReview}
-          review={editingReview}
+          reviewId={editingReview.id}
           onClose={() => setEditingReview(null)}
           onSave={handleSaveEdit}
         />
