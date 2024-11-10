@@ -6,8 +6,9 @@ import { useReviews } from '../context/ReviewContext';
 import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
-import { database, auth } from '../Firebase/firebaseSetup'; 
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { database, auth, storage } from '../Firebase/firebaseSetup'; 
+import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId, editReview, deleteReview } = useReviews();
@@ -69,15 +70,22 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleDeleteReview = (reviewId) => {
-    Alert.alert(
-      "Delete Review",
-      "Are you sure you want to delete this review?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => deleteReview(reviewId) }
-      ]
-    );
+  const handleDeleteReview = async (reviewId, photoUrl) => {
+    try {
+      // Delete the review document from Firestore
+      await deleteDoc(doc(database, 'reviews', reviewId));
+      
+      // If there's a photo URL, delete the image from Firebase Storage
+      if (photoUrl) {
+        const imageRef = ref(storage, photoUrl);
+        await deleteObject(imageRef);
+      }
+  
+      Alert.alert("Success", "Review deleted successfully.");
+      setCafeReviews(cafeReviews.filter(review => review.id !== reviewId));
+    } catch (error) {
+      Alert.alert("Error", "Failed to delete review.");
+    }
   };
 
   const handleSaveEdit = (updatedReview) => {
@@ -158,7 +166,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
                   key={review.id} 
                   review={review}
                   onEdit={handleEditReview}
-                  onDelete={review.userId === auth.currentUser.uid ? handleDeleteReview : undefined}
+                  onDelete={() => handleDeleteReview(review.id, review.photoUrl)}
                 />
               ))
             ) : (
