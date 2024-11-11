@@ -87,19 +87,34 @@ export const ScheduleProvider = ({ children }) => {
     }
   };
 
-  const removeSchedule = async (cafeId, scheduleId) => {
+  const removeSchedule = async (scheduleId) => {
     try {
-      const schedule = schedules[cafeId].find(s => s.id === scheduleId);
-      if (schedule) {
-        await Notifications.cancelScheduledNotificationAsync(schedule.notificationId);
+      const schedulesRef = collection(database, 'schedules');
+      const q = query(schedulesRef, where('__name__', '==', scheduleId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const scheduleDoc = querySnapshot.docs[0];
+        const schedule = scheduleDoc.data();
+
+        if (schedule.notificationId) {
+          await Notifications.cancelScheduledNotificationAsync(schedule.notificationId);
+        }
+
         await deleteDoc(doc(database, 'schedules', scheduleId));
 
-        setSchedules(prev => ({
-          ...prev,
-          [cafeId]: prev[cafeId].filter(schedule => schedule.id !== scheduleId)
-        }));
+        // Update local state
+        setSchedules(prev => {
+          const newSchedules = { ...prev };
+          Object.keys(newSchedules).forEach(cafeId => {
+            newSchedules[cafeId] = newSchedules[cafeId].filter(s => s.id !== scheduleId);
+          });
+          return newSchedules;
+        });
+
+        return true;
       }
-      return true;
+      return false;
     } catch (error) {
       console.error('Error removing schedule:', error);
       return false;

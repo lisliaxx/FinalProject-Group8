@@ -9,6 +9,7 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
@@ -17,6 +18,18 @@ import { auth, database, storage } from '../Firebase/firebaseSetup';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useSchedules } from '../context/ScheduleContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
+const separateSchedules = (schedules) => {
+  const now = new Date();
+  return {
+    upcoming: schedules.filter(schedule => schedule.date > now)
+      .sort((a, b) => a.date - b.date),
+    past: schedules.filter(schedule => schedule.date <= now)
+      .sort((a, b) => b.date - a.date) 
+  };
+};
 
 const ProfileScreen = ({ navigation }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -27,9 +40,13 @@ const ProfileScreen = ({ navigation }) => {
     photoURL: null,
   });
   const [tempProfileData, setTempProfileData] = useState({ ...profileData });
+  const [userSchedules, setUserSchedules] = useState([]);
+  const { removeSchedule } = useSchedules();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
+    fetchUserSchedules();
   }, []);
 
   useLayoutEffect(() => {
@@ -69,6 +86,23 @@ const ProfileScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error fetching user profile:', error);
       Alert.alert('Error', 'Failed to load profile data');
+    }
+  };
+
+  const fetchUserSchedules = async () => {
+    try {
+      const schedulesRef = collection(database, 'schedules');
+      const q = query(schedulesRef, where('userId', '==', auth.currentUser.uid));
+      const querySnapshot = await getDocs(q);
+      const schedules = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: new Date(doc.data().date)
+      }));
+      setUserSchedules(schedules.sort((a, b) => a.date - b.date));
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+      Alert.alert('Error', 'Failed to load schedules');
     }
   };
 
@@ -148,8 +182,60 @@ const ProfileScreen = ({ navigation }) => {
     }
   };
 
+  const handleDeleteSchedule = async (scheduleId) => {
+    Alert.alert(
+      'Delete Schedule',
+      'Are you sure you want to delete this schedule?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const success = await removeSchedule(scheduleId);
+              if (success) {
+                fetchUserSchedules();
+              } else {
+                Alert.alert('Error', 'Failed to delete schedule');
+              }
+            } catch (error) {
+              console.error('Error deleting schedule:', error);
+              Alert.alert('Error', 'Failed to delete schedule');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchUserProfile(),
+        fetchUserSchedules()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      Alert.alert('Error', 'Failed to refresh data');
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[Colors.primary]} 
+          tintColor={Colors.primary}
+        />
+      }
+    >
       <View style={styles.mainContent}>
         {/* Left Side - Profile Image */}
         <View style={styles.imageSection}>
@@ -231,6 +317,50 @@ const ProfileScreen = ({ navigation }) => {
           >
             <Ionicons name="close-circle" size={20} color={Colors.error} />
           </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Upcoming Schedules Section */}
+      <View style={styles.schedulesSection}>
+        <Text style={styles.sectionTitle}>Upcoming Visits</Text>
+        {separateSchedules(userSchedules).upcoming.length === 0 ? (
+          <Text style={styles.noSchedulesText}>No upcoming visits</Text>
+        ) : (
+          separateSchedules(userSchedules).upcoming.map((schedule) => (
+            <View key={schedule.id} style={styles.scheduleCard}>
+              <View style={styles.scheduleInfo}>
+                <Text style={styles.cafeName}>{schedule.cafeName}</Text>
+                <Text style={styles.scheduleDate}>
+                  {schedule.date.toLocaleString()}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.deleteScheduleButton}
+                onPress={() => handleDeleteSchedule(schedule.id)}
+              >
+                <Ionicons name="trash-outline" size={20} color={Colors.error} />
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+      </View>
+
+      {/* Past Schedules Section */}
+      <View style={styles.schedulesSection}>
+        <Text style={styles.sectionTitle}>Past Visits</Text>
+        {separateSchedules(userSchedules).past.length === 0 ? (
+          <Text style={styles.noSchedulesText}>No past visits</Text>
+        ) : (
+          separateSchedules(userSchedules).past.map((schedule) => (
+            <View key={schedule.id} style={[styles.scheduleCard, styles.pastScheduleCard]}>
+              <View style={styles.scheduleInfo}>
+                <Text style={[styles.cafeName, styles.pastText]}>{schedule.cafeName}</Text>
+                <Text style={[styles.scheduleDate, styles.pastText]}>
+                  {schedule.date.toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          ))
         )}
       </View>
     </ScrollView>
@@ -338,6 +468,67 @@ const styles = StyleSheet.create({
     top: 8,
     right: 38,
     padding: 6,
+  },
+  schedulesSection: {
+    padding: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    margin: 16,
+    marginTop: 0,
+    shadowColor: Colors.shadow,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.textPrimary,
+    marginBottom: 16,
+  },
+  noSchedulesText: {
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    padding: 16,
+  },
+  scheduleCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  scheduleInfo: {
+    flex: 1,
+  },
+  cafeName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  scheduleDate: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  deleteScheduleButton: {
+    padding: 8,
+  },
+  pastScheduleCard: {
+    backgroundColor: Colors.surface,
+    opacity: 0.8,
+  },
+  pastText: {
+    color: Colors.textSecondary,
   },
 });
 

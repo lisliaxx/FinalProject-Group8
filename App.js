@@ -150,9 +150,9 @@ const TabNavigator = () => {
 
 // Defines the stack navigator for authentication screens
 const AuthStackNavigator = () => (
-  <AuthStack.Navigator>
-    <AuthStack.Screen name="Login" component={Login} options={{ title: 'Login' }} />
-    <AuthStack.Screen name="Signup" component={Signup} options={{ title: 'Signup',headerLeft: () => null, }} />
+  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Screen name="Login" component={Login} />
+    <AuthStack.Screen name="Signup" component={Signup} />
   </AuthStack.Navigator>
 );
 
