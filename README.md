@@ -1,5 +1,8 @@
 # SipSpotter
 
+## App description:
+Discover your city's café scene with SipSpotter. Whether you're a coffee enthusiast or a casual café-goer, our app connects you with the best local spots using real-time Yelp reviews, ratings, and photos. Search by location to find cafés near you, bookmark your favorites, and share your experiences. Each café profile provides detailed information, including hours of operation, contact info, accessibility features, and a link to their Yelp page. Get personalized recommendations, explore nearby gems on an interactive map, and make café hopping easier than ever with SipSpotter.
+
 ## Group 8 Tingyu Li, Mon-Shan Lin
 
 ## 3 collections:
