@@ -94,7 +94,7 @@ service cloud.firestore {
 ```
 ## Firebase Index Setup
 
-<img src="assets/IndexSetup.png" alt="Login" width="500" />
+<img src="assets/IndexSetup.png" alt="Login" width="600" />
 
 ## App Screenshots - Iteration 1
 
