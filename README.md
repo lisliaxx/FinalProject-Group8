@@ -70,7 +70,7 @@ Delete: Users can remove cafes from their favorites list.
 - Implement create, read and delete operations for the users collection
 - Write README file
 
-## Firebase Rules Example
+## Firebase Rules Setup
 Ensure your Firestore security rules support data protection and allow access only to authorized users:
 
 
@@ -104,7 +104,7 @@ service cloud.firestore {
 ### Signup Screen
 <img src="assets/Signup.png" alt="Login" width="200" />
 
-### Favorite Screen
+### Favorite Cafe Screen
 <img src="assets/FavoriteScreen.png" alt="Login" width="200" />
 
 ### Cafe Detail Screen
