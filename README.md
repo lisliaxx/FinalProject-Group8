@@ -68,11 +68,24 @@ Delete: Users can remove cafes from their favorites list.
 - Implement create, read, update and delete operations for the reviews collection
 - Implement create, read and delete operations for the schedules collection
 - Implement create, read and delete operations for the users collection
-- Draft README file
+- Write README file
 
 ## Firebase Rules Example
+Ensure your Firestore security rules support data protection and allow access only to authorized users:
 
+service cloud.firestore {
+match /databases/{database}/documents {
+  match /reviews/{reviewId}{
+     allow read: if request.auth != null;
+     allow create: if request.auth != null;
+     allow update, delete: if request.auth != null && request.auth.uid == resource.data
+}
 
+match /{document=**} {
+  allow read, write: if request.auth != null;
+ 	}
+ }
+}
 
 ## App Screenshots - Iteration 1
 
