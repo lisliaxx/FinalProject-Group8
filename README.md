@@ -1,12 +1,27 @@
 # SipSpotter
-
-## App description:
-Discover your city's café scene with SipSpotter. Whether you're a coffee enthusiast or a casual café-goer, our app connects you with the best local spots using real-time Yelp reviews, ratings, and photos. Search by location to find cafés near you, bookmark your favorites, and share your experiences. Each café profile provides detailed information, including hours of operation, contact info, accessibility features, and a link to their Yelp page. Get personalized recommendations, explore nearby gems on an interactive map, and make café hopping easier than ever with SipSpotter.
-
 ## Group 8 Tingyu Li, Mon-Shan Lin
 
-## 3 collections:
-### 1. reviews:
+## Overview
+This project is a mobile application that enables users to explore cafes, submit reviews, schedule visits, and save favorite cafes. The application is built using React Native and integrates with Firebase for backend services such as authentication and Firestore for data management. The following document provides information about the data model, features, and functionality implemented within the app.
+
+## Features
+
+- User Authentication: Users can register, log in, and log out.
+- Reviews: Users can submit, view, edit, and delete reviews for cafes they created. They can view other users' reviews but cannot edit or delete them.
+- Schedules: Users can schedule and view visits to cafes.
+- Favorite Cafes: Users can add cafes to their list of favorites and view them on the favorites screen.
+
+## Firebase Setup
+
+Firebase is configured for:
+
+- Authentication: For handling user login, registration, and session management.
+- Firestore Database: For storing and managing data related to user profiles, reviews, schedules and favorite cafes.
+
+## Firebase collections:
+The app uses three main collections in Firebase Firestore to manage the data: reviews, schedules, and users. Each collection has specific fields and CRUD functionality associated with it.
+
+### 1. Reviews:
 This collection holds data related to cafe reviews submitted by app users.
 
 #### CRUD operations:
@@ -18,7 +33,7 @@ Update: Users can edit their own reviews to modify comments, update the rating, 
 
 Delete: Users have the option to delete their own reviews, removing their feedback and associated data from the system. 
 
-### 2. schedules:
+### 2. Schedules:
 This collection records users' scheduled visits to cafes.
 
 #### CRUD operations:
@@ -28,17 +43,36 @@ Read: Users can view their list of scheduled visits, allowing them to see when t
 
 Delete: Users can cancel scheduled visits, removing the associated data from the collection, and any notifications can be canceled accordingly.
  
-### 3. users:
-This collection contains each user’s list of favorite cafes and user information.
+### 3. Users:
+This collection holds data about each user’s profile and their list of favorite cafes.
 
 #### CRUD operations:
-Create: Users can add cafes to their list of favorites, which stores the cafe’s details in the user’s favorite list within this collection.
+Create: Users can add cafes to their list of favorites, which stores the cafe’s details in the user’s favorite list within this collection. Users can also add their user name and profile photo on the profile screen.
 
-Read: Users can view their favorite cafes list, allowing them to see all their saved cafes in one place. In addition, user can view their user profile.
+Read: Users can view their favorite cafes list, allowing them to see all their saved cafes in one place. In addition, user can view their user profile on the profile screen.
 
 Update: Users can update their profile information, such as their name or profile photo.
 
 Delete: Users can remove cafes from their favorites list.
+
+## Contributions:
+
+### Tingyu Li:
+
+### Mon-Shan Lin:
+- Setup firebase to storing data and user authentication
+- Create login and signup screens to allow users to create new accounts or log in to existing ones
+- Validate user input (e.g., email format, password strength) 
+- Add logout on profile screen
+- Create reviews, schedules and users collections
+- Implement create, read, update and delete operations for the reviews collection
+- Implement create, read and delete operations for the schedules collection
+- Implement create, read and delete operations for the users collection
+- Draft README file
+
+## Firebase Rules Example
+
+
 
 ## App Screenshots - Iteration 1
 
