@@ -58,6 +58,10 @@ Delete: Users can remove cafes from their favorites list.
 ## Contributions:
 
 ### Tingyu Li:
+- Initial project setup with basic UI design
+- Frontend features creation with unified color patterns and mock samples
+- Make necessary frontend adjustments based on backend database feedback
+- Debug and fix errors related to pull requests
 
 ### Mon-Shan Lin:
 - Setup firebase to storing data and user authentication
@@ -95,6 +99,27 @@ service cloud.firestore {
 ## Firebase Index Setup
 
 <img src="assets/IndexSetup.png" alt="Login" width="600" />
+
+## Storage Setup
+Ensure your Firestore storage rules match the following: (Please adjust the image size if the current plan usage is not supporting high-resolution images) 
+
+```Storage 
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /reviews/{filename} {
+      allow read: if true;  
+      allow write: if request.auth != null  
+                   && request.resource.size < 5 * 1024 * 1024  
+                   && request.resource.contentType.matches('image/.*'); 
+    }
+
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
 
 ## App Screenshots - Iteration 1
 
