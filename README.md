@@ -116,6 +116,9 @@ service cloud.firestore {
 ### Edit Review Screen
 <img src="assets/EditReview.png" alt="Login" width="200" />
 
+### Delete Review Screen
+<img src="assets/Delete.png" alt="Login" width="200" />
+
 ### Create Schedule Screen
 <img src="assets/CreateSchedule.png" alt="Login" width="200" />
 
