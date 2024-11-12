@@ -7,25 +7,70 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useSchedules } from '../context/ScheduleContext';
 
 const ScheduleModal = ({ visible, onClose, cafe }) => {
   const [date, setDate] = useState(new Date());
-  const [showPicker, setShowPicker] = useState(Platform.OS === 'ios');
+  const [showPicker, setShowPicker] = useState(false);
   const { addSchedule } = useSchedules();
   
-  const handleConfirm = async () => {
+  const handleConfirm = async (selectedDate) => {
+    setShowPicker(false);
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (date <= new Date()) {
+      alert('Please select a future date and time.');
+      return;
+    }
+
     if (await addSchedule(cafe.id, cafe.name, date)) {
-      if (Platform.OS === 'android') {
-        setShowPicker(false);
-      }
       alert('Visit scheduled! You will receive a reminder notification.');
       onClose();
     } else {
       alert('Failed to schedule visit. Please try again.');
+    }
+  };
+
+  const renderDatePicker = () => {
+    if (Platform.OS === 'ios') {
+      return (
+        <DateTimePickerModal
+          isVisible={showPicker}
+          mode="datetime"
+          onConfirm={handleConfirm}
+          onCancel={() => setShowPicker(false)}
+          minimumDate={new Date()}
+          date={date}
+          display="spinner"
+          themeVariant="light"
+          modalStyleIOS={{
+            margin: 0,
+            backgroundColor: 'white',
+          }}
+          pickerContainerStyleIOS={{
+            paddingTop: 20,
+          }}
+        />
+      );
+    } else {
+      return (
+        <DateTimePickerModal
+          isVisible={showPicker}
+          mode="datetime"
+          onConfirm={handleConfirm}
+          onCancel={() => setShowPicker(false)}
+          minimumDate={new Date()}
+          date={date}
+          display="default"
+        />
+      );
     }
   };
 
@@ -46,39 +91,22 @@ const ScheduleModal = ({ visible, onClose, cafe }) => {
           </View>
 
           <View style={styles.datePickerContainer}>
-            {(showPicker || Platform.OS === 'ios') && (
-              <DateTimePicker
-                value={date}
-                mode="datetime"
-                display="default"
-                minimumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  if (selectedDate) {
-                    setDate(selectedDate);
-                    if (Platform.OS === 'android') {
-                      setShowPicker(false);
-                    }
-                  }
-                }}
-              />
-            )}
-            
-            {Platform.OS === 'android' && !showPicker && (
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowPicker(true)}
-              >
-                <Ionicons name="calendar" size={24} color={Colors.primary} />
-                <Text style={styles.dateButtonText}>
-                  Select Date and Time
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowPicker(true)}
+            >
+              <Ionicons name="calendar" size={24} color={Colors.primary} />
+              <Text style={styles.dateButtonText}>
+                {date.toLocaleString()}
+              </Text>
+            </TouchableOpacity>
+
+            {renderDatePicker()}
           </View>
 
           <TouchableOpacity
             style={styles.addButton}
-            onPress={handleConfirm}
+            onPress={handleSchedule}
           >
             <Text style={styles.addButtonText}>Schedule Visit</Text>
           </TouchableOpacity>
@@ -117,6 +145,7 @@ const styles = StyleSheet.create({
   datePickerContainer: {
     alignItems: 'center',
     marginBottom: 20,
+    width: '100%',
   },
   dateButton: {
     flexDirection: 'row',
@@ -125,6 +154,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.primary,
+    width: '100%',
+    backgroundColor: Colors.background,
   },
   dateButtonText: {
     marginLeft: 8,
