@@ -73,28 +73,25 @@ Delete: Users can remove cafes from their favorites list.
 ## Firebase Rules Example
 Ensure your Firestore security rules support data protection and allow access only to authorized users:
 
+
+```firestore
 service cloud.firestore {
-match /databases/{database}/documents {
-
-  match /reviews/{reviewId}{
+  match /databases/{database}/documents {
   
-     allow read: if request.auth != null;
-     
-     allow create: if request.auth != null;
-     
-     allow update, delete: if request.auth != null && request.auth.uid == resource.data
-     
+    // Rules for the "reviews" collection
+    match /reviews/{reviewId} {
+       allow read: if request.auth != null;
+       allow create: if request.auth != null;
+       allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+    }
+
+    // Fallback rule for all other documents
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
 }
-
-match /{document=**} {
-
-  allow read, write: if request.auth != null;
-  
- 	}
-  
- }
- 
-}
+```
 
 ## App Screenshots - Iteration 1
 
