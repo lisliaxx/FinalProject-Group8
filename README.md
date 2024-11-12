@@ -75,16 +75,25 @@ Ensure your Firestore security rules support data protection and allow access on
 
 service cloud.firestore {
 match /databases/{database}/documents {
+
   match /reviews/{reviewId}{
+  
      allow read: if request.auth != null;
+     
      allow create: if request.auth != null;
+     
      allow update, delete: if request.auth != null && request.auth.uid == resource.data
+     
 }
 
 match /{document=**} {
+
   allow read, write: if request.auth != null;
+  
  	}
+  
  }
+ 
 }
 
 ## App Screenshots - Iteration 1
