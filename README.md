@@ -94,22 +94,30 @@ service cloud.firestore {
 ```
 ## Firebase Index Setup
 
-<img src="assets/IndexSetup.png" alt="Login" width="200" />
+<img src="assets/IndexSetup.png" alt="Login" width="500" />
 
 ## App Screenshots - Iteration 1
+
 ### Login Screen
 <img src="assets/Login.png" alt="Login" width="200" />
+
 ### Signup Screen
 <img src="assets/Signup.png" alt="Login" width="200" />
+
 ### Favorite Screen
 <img src="assets/FavoriteScreen.png" alt="Login" width="200" />
+
 ### Cafe Detail Screen
 <img src="assets/CafeDetail.png" alt="Login" width="200" />
+
 ### Create Review Screen
 <img src="assets/CreateReview.png" alt="Login" width="200" />
+
 ### Edit Review Screen
 <img src="assets/EditReview.png" alt="Login" width="200" />
+
 ### Create Schedule Screen
 <img src="assets/CreateSchedule.png" alt="Login" width="200" />
+
 ### User Profile Screen
 <img src="assets/UserProfile.png" alt="Login" width="200" />
