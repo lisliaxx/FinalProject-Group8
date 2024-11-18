@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Image } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Add your Yelp API key to .env file
 const YELP_API_KEY = process.env.EXPO_PUBLIC_YELP_API_KEY;
 
 function MapScreen() {
@@ -11,6 +11,15 @@ function MapScreen() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [region, setRegion] = useState(null);
   const [cafes, setCafes] = useState([]);
+  const [isMapReady, setIsMapReady] = useState(false);
+
+  useEffect(() => {
+    console.log('Cafes updated:', cafes.length);
+  }, [cafes]);
+
+  useEffect(() => {
+    console.log('Map ready state:', isMapReady);
+  }, [isMapReady]);
 
   useEffect(() => {
     (async () => {
@@ -22,45 +31,86 @@ function MapScreen() {
         }
 
         let currentLocation = await Location.getCurrentPositionAsync({});
+        console.log('Got location:', currentLocation.coords);
         setLocation(currentLocation);
         
-        // Set a tighter zoom level
-        setRegion({
+        const newRegion = {
           latitude: currentLocation.coords.latitude,
           longitude: currentLocation.coords.longitude,
-          latitudeDelta: 0.01,    // Even smaller zoom level
-          longitudeDelta: 0.01,   // Even smaller zoom level
-        });
-
-        await fetchNearbyCafes(currentLocation.coords);
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        };
+        
+        setRegion(newRegion);
       } catch (error) {
+        console.error('Location error:', error);
         setErrorMsg('Error getting location');
-        console.error(error);
       }
     })();
   }, []);
 
+  useEffect(() => {
+    if (location && isMapReady) {
+      console.log('Fetching cafes...');
+      fetchNearbyCafes(location.coords);
+    }
+  }, [location, isMapReady]);
+
+  useEffect(() => {
+    loadSavedCafes();
+  }, []);
+
+  useEffect(() => {
+    if (cafes.length > 0) {
+      saveCafes(cafes);
+    }
+  }, [cafes]);
+
+  const saveCafes = async (cafesData) => {
+    try {
+      await AsyncStorage.setItem('savedCafes', JSON.stringify(cafesData));
+      console.log('Cafes saved to storage');
+    } catch (error) {
+      console.error('Error saving cafes:', error);
+    }
+  };
+
+  const loadSavedCafes = async () => {
+    try {
+      const savedCafes = await AsyncStorage.getItem('savedCafes');
+      if (savedCafes) {
+        setCafes(JSON.parse(savedCafes));
+        console.log('Loaded saved cafes');
+      }
+    } catch (error) {
+      console.error('Error loading saved cafes:', error);
+    }
+  };
+
   const fetchNearbyCafes = async (coords) => {
     try {
-      const response = await fetch(
-        `https://api.yelp.com/v3/businesses/search?term=cafe&latitude=${coords.latitude}&longitude=${coords.longitude}&radius=1000&limit=15&sort_by=distance`, // Added sort_by=distance
-        {
-          headers: {
-            Authorization: `Bearer ${YELP_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      console.log('Fetching new cafes...');
+      const url = `https://api.yelp.com/v3/businesses/search?term=cafe&latitude=${coords.latitude}&longitude=${coords.longitude}&radius=2000&limit=20`;
+      
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${YELP_API_KEY}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Yelp API error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log(`Found ${data.businesses?.length} cafes nearby`);
-      setCafes(data.businesses);
+      if (data.businesses && data.businesses.length > 0) {
+        setCafes(data.businesses);
+      }
     } catch (error) {
       console.error('Error fetching cafes:', error);
+      setErrorMsg('Error fetching cafes');
     }
   };
 
@@ -72,8 +122,15 @@ function MapScreen() {
           initialRegion={region}
           showsUserLocation
           showsMyLocationButton
+          onMapReady={() => {
+            console.log('Map is ready');
+            setIsMapReady(true);
+          }}
+          onRegionChangeComplete={(newRegion) => {
+            setRegion(newRegion);
+          }}
         >
-          {cafes.map((cafe) => (
+          {cafes.length > 0 && cafes.map((cafe) => (
             <Marker
               key={cafe.id}
               coordinate={{
@@ -83,7 +140,6 @@ function MapScreen() {
               title={cafe.name}
               description={`${cafe.location.address1} • Rating: ${cafe.rating}⭐️`}
               pinColor="red"
-              image={require('../assets/CafeMarker.png')} // Optional: Add a custom cafe marker icon
             />
           ))}
         </MapView>
