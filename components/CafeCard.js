@@ -1,42 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import { useFavorites } from '../context/FavoritesContext';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { database } from '../Firebase/firebaseSetup';
 
-function CafeCard({ cafe, onPress }) {
+function CafeCard({ cafe, onPress, distance }) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const isfav = isFavorite(cafe.id);
-  const [cafeRating, setCafeRating] = useState(0);
-  const [reviewCount, setReviewCount] = useState(0);
 
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const reviewsRef = collection(database, 'reviews');
-        const q = query(reviewsRef, where('cafeId', '==', cafe.id));
-        const querySnapshot = await getDocs(q);
-        
-        const reviews = querySnapshot.docs.map(doc => doc.data());
-        const totalReviews = reviews.length;
-        
-        if (totalReviews > 0) {
-          const avgRating = (
-            reviews.reduce((sum, review) => sum + review.rating, 0) / totalReviews
-          ).toFixed(1);
-          setCafeRating(avgRating);
-        }
-        
-        setReviewCount(totalReviews);
-      } catch (error) {
-        console.error('Error fetching reviews:', error);
-      }
-    };
-
-    fetchReviews();
-  }, [cafe.id]);
+  const formatDistance = (meters) => {
+    if (!meters) return 'Distance unknown';
+    if (meters < 1000) {
+      return `${Math.round(meters)} m`;
+    }
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
 
   const handleFavoritePress = (e) => {
     e.stopPropagation();
@@ -62,17 +40,15 @@ function CafeCard({ cafe, onPress }) {
             />
           </TouchableOpacity>
         </View>
-        <View style={styles.ratingContainer}>
-          <Text style={styles.rating}>
-            {reviewCount > 0 ? `★ ${cafeRating}` : 'No ratings yet'}
-          </Text>
-          {reviewCount > 0 && (
+        <View style={styles.infoContainer}>
+          <View style={styles.ratingContainer}>
+            <Text style={styles.rating}>★ {cafe.rating}</Text>
             <Text style={styles.reviewCount}>
-              ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
+              ({cafe.review_count} reviews)
             </Text>
-          )}
+          </View>
+          <Text style={styles.distance}>{formatDistance(distance)}</Text>
         </View>
-        <Text style={styles.address}>{cafe.address}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -101,7 +77,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   name: {
     fontSize: 18,
@@ -113,10 +89,14 @@ const styles = StyleSheet.create({
   favoriteButton: {
     padding: 4,
   },
+  infoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
   },
   rating: {
     fontSize: 16,
@@ -127,9 +107,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
-  address: {
+  distance: {
     fontSize: 14,
     color: Colors.textSecondary,
+    fontWeight: '500',
   },
 });
 

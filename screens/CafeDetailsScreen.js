@@ -10,13 +10,15 @@ import { database, auth, storage } from '../Firebase/firebaseSetup';
 import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
 import { ref, deleteObject } from 'firebase/storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFavorites } from '../context/FavoritesContext';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId, editReview, deleteReview } = useReviews();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
-  const [cafeReviews, setCafeReviews] = useState([]); 
-  const [averageRating, setAverageRating] = useState(0);
+  const [cafeReviews, setCafeReviews] = useState([]);
+  const [cafeDetails, setCafeDetails] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const cafe = route.params?.cafe;
@@ -25,19 +27,34 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={() => setShowScheduleModal(true)}
-        >
-          <Ionicons 
-            name="calendar-outline" 
-            size={24} 
-            color={Colors.textLight}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => {
+              console.log('Toggle favorite for:', cafe.name);
+              toggleFavorite(cafe);
+            }}
+          >
+            <Ionicons 
+              name={isFavorite(cafe.id) ? "heart" : "heart-outline"} 
+              size={24} 
+              color={isFavorite(cafe.id) ? Colors.error : Colors.textLight}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => setShowScheduleModal(true)}
+          >
+            <Ionicons 
+              name="calendar-outline" 
+              size={24} 
+              color={Colors.textLight}
+            />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, cafe, isFavorite]);
 
     useEffect(() => {
       const fetchReviews = async () => {
@@ -147,6 +164,45 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     }
   }, [cafe?.id]);
 
+  // Fetch detailed cafe information from Yelp
+  useEffect(() => {
+    const fetchCafeDetails = async () => {
+      try {
+        const response = await fetch(
+          `https://api.yelp.com/v3/businesses/${cafeId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.EXPO_PUBLIC_YELP_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const data = await response.json();
+        console.log('Fetched cafe details:', data);
+        setCafeDetails(data);
+      } catch (error) {
+        console.error('Error fetching cafe details:', error);
+        Alert.alert('Error', 'Failed to load cafe details');
+      }
+    };
+
+    if (cafeId) {
+      fetchCafeDetails();
+    }
+  }, [cafeId]);
+
+  const formatHours = (hours) => {
+    if (!hours || !hours.length) return 'Hours not available';
+    
+    const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return hours[0].open.map(schedule => {
+      const day = daysOfWeek[schedule.day];
+      const start = schedule.start.replace(/(\d{2})(\d{2})/, '$1:$2');
+      const end = schedule.end.replace(/(\d{2})(\d{2})/, '$1:$2');
+      return `${day}: ${start} - ${end}`;
+    });
+  };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ScrollView 
@@ -162,43 +218,62 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       >
         {/* Cafe Info Section */}
         <View style={styles.cafeInfo}>
+          {cafeDetails?.photos && cafeDetails.photos[0] && (
+            <Image 
+              source={{ uri: cafeDetails.photos[0] }}
+              style={styles.cafeImage}
+            />
+          )}
           <Text style={styles.cafeName}>{cafe.name}</Text>
           <View style={styles.ratingContainer}>
-            <Text style={styles.ratingText}>★ {averageRating ? averageRating.toFixed(1) : 'N/A'}</Text>
-            <Text style={styles.reviewCount}>({cafeReviews.length} reviews)</Text>
+            <Text style={styles.ratingText}>★ {cafe.rating}</Text>
+            <Text style={styles.reviewCount}>({cafe.review_count} Yelp reviews)</Text>
           </View>
+          {cafe.price && (
+            <Text style={styles.priceText}>{cafe.price}</Text>
+          )}
         </View>
 
         {/* Address Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Address</Text>
-          <Text style={styles.sectionContent}>{cafe.address}</Text>
+          <Text style={styles.sectionContent}>
+            {cafe.location.address1}
+            {cafe.location.address2 ? `\n${cafe.location.address2}` : ''}
+            {`\n${cafe.location.city}, ${cafe.location.state} ${cafe.location.zip_code}`}
+          </Text>
+          {cafe.phone && (
+            <Text style={styles.phoneNumber}>{cafe.phone}</Text>
+          )}
         </View>
 
         {/* Hours Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hours</Text>
-          <Text style={styles.sectionContent}>{cafe.hours}</Text>
+          {cafeDetails?.hours ? (
+            <View>
+              {formatHours(cafeDetails.hours).map((schedule, index) => (
+                <Text key={index} style={styles.hoursText}>{schedule}</Text>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.sectionContent}>Hours not available</Text>
+          )}
         </View>
 
-        {/* Features Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Features</Text>
-          <View style={styles.featuresContainer}>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>🐾 Pet Friendly</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>🅿️ Parking Available</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>♿️ Wheelchair Accessible</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>📶 Free WiFi</Text>
+        {/* Categories Section */}
+        {cafe.categories && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <View style={styles.categoriesContainer}>
+              {cafe.categories.map((category, index) => (
+                <View key={index} style={styles.categoryItem}>
+                  <Text style={styles.categoryText}>{category.title}</Text>
+                </View>
+              ))}
             </View>
           </View>
-        </View>
+        )}
 
         {/* Reviews Section */}
         <View style={styles.section}>
@@ -319,6 +394,52 @@ const styles = StyleSheet.create({
   addReviewText: {
     color: Colors.white,
     fontWeight: '500',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    marginHorizontal: 8,
+    padding: 4,
+  },
+  cafeImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  priceText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  phoneNumber: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 8,
+  },
+  hoursText: {
+    fontSize: 16,
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryItem: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  categoryText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
   },
 });
 

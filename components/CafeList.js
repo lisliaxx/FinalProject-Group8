@@ -10,6 +10,7 @@ function CafeList({ cafes, onCafePress }) {
       renderItem={({ item }) => (
         <CafeCard
           cafe={item}
+          distance={item.distance}
           onPress={() => onCafePress(item)}
         />
       )}

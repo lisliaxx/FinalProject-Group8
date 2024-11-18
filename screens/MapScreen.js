@@ -1,17 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Image } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { View, StyleSheet, Dimensions, Text } from 'react-native';
+import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const YELP_API_KEY = process.env.EXPO_PUBLIC_YELP_API_KEY;
 
 function MapScreen() {
+  const navigation = useNavigation();
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [region, setRegion] = useState(null);
   const [cafes, setCafes] = useState([]);
   const [isMapReady, setIsMapReady] = useState(false);
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+  };
+
+  const formatDistance = (meters) => {
+    if (!meters) return 'Distance unknown';
+    if (meters < 1000) {
+      return `${Math.round(meters)}m`;
+    }
+    return `${(meters / 1000).toFixed(1)}km`;
+  };
 
   useEffect(() => {
     console.log('Cafes updated:', cafes.length);
@@ -126,22 +151,44 @@ function MapScreen() {
             console.log('Map is ready');
             setIsMapReady(true);
           }}
-          onRegionChangeComplete={(newRegion) => {
-            setRegion(newRegion);
-          }}
         >
-          {cafes.length > 0 && cafes.map((cafe) => (
-            <Marker
-              key={cafe.id}
-              coordinate={{
-                latitude: cafe.coordinates.latitude,
-                longitude: cafe.coordinates.longitude,
-              }}
-              title={cafe.name}
-              description={`${cafe.location.address1} • Rating: ${cafe.rating}⭐️`}
-              image={require('../assets/CafeMarker.png')}
-            />
-          ))}
+          {cafes.length > 0 && cafes.map((cafe) => {
+            const distance = location ? calculateDistance(
+              location.coords.latitude,
+              location.coords.longitude,
+              cafe.coordinates.latitude,
+              cafe.coordinates.longitude
+            ) : null;
+
+            return (
+              <Marker
+                key={cafe.id}
+                coordinate={{
+                  latitude: cafe.coordinates.latitude,
+                  longitude: cafe.coordinates.longitude,
+                }}
+                image={require('../assets/CafeMarker.png')}
+              >
+                <Callout
+                  onPress={() => {
+                    console.log('Navigating to details for:', cafe.name);
+                    navigation.navigate('CafeDetails', { cafe });
+                  }}
+                >
+                  <View style={styles.calloutContainer}>
+                    <Text style={styles.calloutTitle}>{cafe.name}</Text>
+                    <Text style={styles.calloutAddress}>{cafe.location.address1}</Text>
+                    <View style={styles.calloutInfo}>
+                      <Text style={styles.calloutRating}>★ {cafe.rating}</Text>
+                      <Text style={styles.calloutDistance}>
+                        {formatDistance(distance)}
+                      </Text>
+                    </View>
+                  </View>
+                </Callout>
+              </Marker>
+            );
+          })}
         </MapView>
       )}
     </View>
@@ -155,6 +202,36 @@ const styles = StyleSheet.create({
   map: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
+  },
+  calloutContainer: {
+    padding: 10,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    minWidth: 150,
+  },
+  calloutTitle: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginBottom: 5,
+  },
+  calloutAddress: {
+    color: 'gray',
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  calloutInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  calloutRating: {
+    color: '#FFD700',
+    fontSize: 12,
+  },
+  calloutDistance: {
+    color: 'gray',
+    fontSize: 12,
+    marginLeft: 8,
   },
 });
 
