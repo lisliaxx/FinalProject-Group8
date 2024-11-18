@@ -139,7 +139,7 @@ function MapScreen() {
               }}
               title={cafe.name}
               description={`${cafe.location.address1} • Rating: ${cafe.rating}⭐️`}
-              pinColor="red"
+              image={require('../assets/CafeMarker.png')}
             />
           ))}
         </MapView>
