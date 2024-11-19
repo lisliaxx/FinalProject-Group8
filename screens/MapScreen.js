@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { database } from '../Firebase/firebaseSetup';
+import { Ionicons } from '@expo/vector-icons';
 
 const YELP_API_KEY = process.env.EXPO_PUBLIC_YELP_API_KEY;
 
@@ -179,61 +180,81 @@ function MapScreen() {
     }
   };
 
+  const handleRefresh = async () => {
+    if (location) {
+      console.log('Refreshing map data...');
+      await fetchNearbyCafes(location.coords);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {region && (
-        <MapView
-          style={styles.map}
-          initialRegion={region}
-          showsUserLocation
-          showsMyLocationButton
-          onMapReady={() => {
-            console.log('Map is ready');
-            setIsMapReady(true);
-          }}
-        >
-          {cafes.length > 0 && cafes.map((cafe) => {
-            const distance = location ? calculateDistance(
-              location.coords.latitude,
-              location.coords.longitude,
-              cafe.coordinates.latitude,
-              cafe.coordinates.longitude
-            ) : null;
+        <>
+          <MapView
+            style={styles.map}
+            initialRegion={region}
+            showsUserLocation
+            showsMyLocationButton
+            onMapReady={() => {
+              console.log('Map is ready');
+              setIsMapReady(true);
+            }}
+          >
+            {cafes.length > 0 && cafes.map((cafe) => {
+              const distance = location ? calculateDistance(
+                location.coords.latitude,
+                location.coords.longitude,
+                cafe.coordinates.latitude,
+                cafe.coordinates.longitude
+              ) : null;
 
-            const cafeRating = cafeRatings[cafe.id] || { rating: cafe.rating, totalReviews: cafe.review_count };
+              const cafeRating = cafeRatings[cafe.id] || { rating: cafe.rating, totalReviews: cafe.review_count };
 
-            return (
-              <Marker
-                key={cafe.id}
-                coordinate={{
-                  latitude: cafe.coordinates.latitude,
-                  longitude: cafe.coordinates.longitude,
-                }}
-                image={require('../assets/CafeMarker.png')}
-              >
-                <Callout
-                  onPress={() => {
-                    console.log('Navigating to details for:', cafe.name);
-                    navigation.navigate('CafeDetails', { cafe });
+              return (
+                <Marker
+                  key={cafe.id}
+                  coordinate={{
+                    latitude: cafe.coordinates.latitude,
+                    longitude: cafe.coordinates.longitude,
                   }}
+                  image={require('../assets/CafeMarker.png')}
                 >
-                  <View style={styles.calloutContainer}>
-                    <Text style={styles.calloutTitle}>{cafe.name}</Text>
-                    <Text style={styles.calloutAddress}>{cafe.location.address1}</Text>
-                    <View style={styles.calloutInfo}>
-                      <Text style={styles.calloutRating}>
-                        ★ {cafeRating.rating.toFixed(1)} ({cafeRating.totalReviews})
-                      </Text>
-                      <Text style={styles.calloutDistance}>
-                        {formatDistance(distance)}
-                      </Text>
+                  <Callout
+                    onPress={() => {
+                      console.log('Navigating to details for:', cafe.name);
+                      navigation.navigate('CafeDetails', { cafe });
+                    }}
+                  >
+                    <View style={styles.calloutContainer}>
+                      <Text style={styles.calloutTitle}>{cafe.name}</Text>
+                      <Text style={styles.calloutAddress}>{cafe.location.address1}</Text>
+                      <View style={styles.calloutInfo}>
+                        <Text style={styles.calloutRating}>
+                          ★ {cafeRating.rating.toFixed(1)} ({cafeRating.totalReviews})
+                        </Text>
+                        <Text style={styles.calloutDistance}>
+                          {formatDistance(distance)}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
-        </MapView>
+                  </Callout>
+                </Marker>
+              );
+            })}
+          </MapView>
+
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={handleRefresh}
+          >
+            <Ionicons 
+              name="refresh" 
+              size={24} 
+              color="white" 
+            />
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
@@ -276,6 +297,25 @@ const styles = StyleSheet.create({
     color: 'gray',
     fontSize: 12,
     marginLeft: 8,
+  },
+  refreshButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: '#007AFF',
+    borderRadius: 30,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });
 
