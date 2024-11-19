@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TextInput } from 'react-native';
 import * as Location from 'expo-location';
 import CafeList from '../components/CafeList';
 import { useFavorites } from '../context/FavoritesContext';
@@ -9,6 +9,8 @@ function FavoritesScreen({ navigation }) {
   const { getFavorites } = useFavorites();
   const [userLocation, setUserLocation] = useState(null);
   const [sortedCafes, setSortedCafes] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredCafes, setFilteredCafes] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -36,11 +38,18 @@ function FavoritesScreen({ navigation }) {
         )
       }));
 
-      // Sort by distance
       const sorted = cafesWithDistance.sort((a, b) => a.distance - b.distance);
       setSortedCafes(sorted);
+      setFilteredCafes(sorted);
     }
   }, [userLocation, getFavorites]);
+
+  useEffect(() => {
+    const filtered = sortedCafes.filter(cafe =>
+      cafe.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredCafes(filtered);
+  }, [searchQuery, sortedCafes]);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3; 
@@ -64,9 +73,16 @@ function FavoritesScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Favorite Cafes</Text>
+      <TextInput
+        style={styles.searchBar}
+        placeholder="Search favorites..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        clearButtonMode="while-editing"
+      />
       {sortedCafes.length > 0 ? (
         <CafeList
-          cafes={sortedCafes}
+          cafes={filteredCafes}
           onCafePress={handleCafePress}
         />
       ) : (
@@ -107,6 +123,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
     textAlign: 'center',
+  },
+  searchBar: {
+    height: 40,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    backgroundColor: '#fff',
   },
 });
 
