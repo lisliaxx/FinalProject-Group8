@@ -20,6 +20,9 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   const [cafeReviews, setCafeReviews] = useState([]);
   const [cafeDetails, setCafeDetails] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [yelpRating, setYelpRating] = useState(0);
+  const [combinedRating, setCombinedRating] = useState(0);
+  const [totalReviewCount, setTotalReviewCount] = useState(0);
 
   const cafe = route.params?.cafe;
   const cafeId = cafe?.id;
@@ -85,11 +88,20 @@ const CafeDetailsScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     if (cafeReviews.length > 0) {
-      const total = cafeReviews.reduce((sum, review) => sum + review.rating, 0);
-      const avg = total / cafeReviews.length;
-      setAverageRating(avg);
+      const localTotal = cafeReviews.reduce((sum, review) => sum + review.rating, 0);
+      const avgLocalRating = localTotal / cafeReviews.length;
+      
+      // Combined rating (50% Yelp, 50% local)
+      const combined = (yelpRating + avgLocalRating) / 2;
+      setCombinedRating(combined);
+      
+      // Combined review count (Yelp + local)
+      setTotalReviewCount(cafe.review_count + cafeReviews.length);
+    } else {
+      setCombinedRating(yelpRating);
+      setTotalReviewCount(cafe.review_count);
     }
-  }, [cafeReviews]);
+  }, [cafeReviews, yelpRating, cafe.review_count]);
 
   const handleEditReview = (review) => {
     if (auth.currentUser?.uid === review.userId) {
@@ -138,13 +150,27 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const cafeDoc = await getDoc(doc(database, 'cafes', cafe.id));
-      if (cafeDoc.exists()) {
-        setCafe({ id: cafeDoc.id, ...cafeDoc.data() });
-      }
+      // Fetch cafe details
+      const response = await fetch(
+        `https://api.yelp.com/v3/businesses/${cafeId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.EXPO_PUBLIC_YELP_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const data = await response.json();
+      setCafeDetails(data);
+      setYelpRating(data.rating || 0);
 
+      // Fetch reviews
       const reviewsRef = collection(database, 'reviews');
-      const q = query(reviewsRef, where('cafeId', '==', cafe.id), orderBy('date', 'desc'));
+      const q = query(
+        reviewsRef,
+        where('cafeId', '==', cafe.id),
+        orderBy('date', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       const fetchedReviews = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -152,19 +178,18 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       }));
       setCafeReviews(fetchedReviews);
 
-      if (fetchedReviews.length > 0) {
-        const total = fetchedReviews.reduce((sum, review) => sum + review.rating, 0);
-        setAverageRating(total / fetchedReviews.length);
-      }
+      // Update total review count
+      setTotalReviewCount(data.review_count + fetchedReviews.length);
+
     } catch (error) {
       console.error('Error refreshing data:', error);
       Alert.alert('Error', 'Failed to refresh data');
     } finally {
       setRefreshing(false);
     }
-  }, [cafe?.id]);
+  }, [cafe?.id, cafeId]);
 
-  // Fetch detailed cafe information from Yelp
+  // Fetch Yelp details
   useEffect(() => {
     const fetchCafeDetails = async () => {
       try {
@@ -178,8 +203,8 @@ const CafeDetailsScreen = ({ route, navigation }) => {
           }
         );
         const data = await response.json();
-        console.log('Fetched cafe details:', data);
         setCafeDetails(data);
+        setYelpRating(data.rating || 0);
       } catch (error) {
         console.error('Error fetching cafe details:', error);
         Alert.alert('Error', 'Failed to load cafe details');
@@ -225,13 +250,26 @@ const CafeDetailsScreen = ({ route, navigation }) => {
             />
           )}
           <Text style={styles.cafeName}>{cafe.name}</Text>
+          
+          {/* Rating Section */}
           <View style={styles.ratingContainer}>
-            <Text style={styles.ratingText}>★ {cafe.rating}</Text>
-            <Text style={styles.reviewCount}>({cafe.review_count} Yelp reviews)</Text>
+            <View style={styles.ratingStars}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Text
+                  key={star}
+                  style={[
+                    styles.star,
+                    star <= Math.round(combinedRating) ? styles.starFilled : styles.starEmpty
+                  ]}
+                >
+                  ★
+                </Text>
+              ))}
+            </View>
+            <Text style={styles.ratingText}>
+              {combinedRating.toFixed(1)} ({totalReviewCount} reviews)
+            </Text>
           </View>
-          {cafe.price && (
-            <Text style={styles.priceText}>{cafe.price}</Text>
-          )}
         </View>
 
         {/* Address Section */}
@@ -334,17 +372,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   ratingContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 12,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  star: {
+    fontSize: 24,
+    marginHorizontal: 2,
+  },
+  starFilled: {
+    color: Colors.rating,
+  },
+  starEmpty: {
+    color: Colors.textSecondary,
   },
   ratingText: {
-    fontSize: 18,
-    color: Colors.rating,
-    marginRight: 8,
-  },
-  reviewCount: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
+    marginTop: 4,
   },
   section: {
     backgroundColor: Colors.white,

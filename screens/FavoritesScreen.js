@@ -28,15 +28,24 @@ function FavoritesScreen({ navigation }) {
   useEffect(() => {
     if (userLocation) {
       const favoriteCafes = getFavorites();
-      const cafesWithDistance = favoriteCafes.map(cafe => ({
-        ...cafe,
-        distance: calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          cafe.coordinates.latitude,
-          cafe.coordinates.longitude
-        )
-      }));
+      const cafesWithDistance = favoriteCafes.map(cafe => {
+        if (!cafe.coordinates) {
+          return {
+            ...cafe,
+            distance: Infinity
+          };
+        }
+        
+        return {
+          ...cafe,
+          distance: calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            cafe.coordinates.latitude,
+            cafe.coordinates.longitude
+          )
+        };
+      });
 
       const sorted = cafesWithDistance.sort((a, b) => a.distance - b.distance);
       setSortedCafes(sorted);
@@ -52,7 +61,11 @@ function FavoritesScreen({ navigation }) {
   }, [searchQuery, sortedCafes]);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371e3; 
+    if (!lat1 || !lon1 || !lat2 || !lon2) {
+      return Infinity;
+    }
+
+    const R = 6371e3;
     const φ1 = lat1 * Math.PI/180;
     const φ2 = lat2 * Math.PI/180;
     const Δφ = (lat2-lat1) * Math.PI/180;
@@ -63,7 +76,7 @@ function FavoritesScreen({ navigation }) {
             Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-    return R * c; 
+    return R * c;
   };
 
   const handleCafePress = (cafe) => {

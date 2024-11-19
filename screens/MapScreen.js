@@ -4,6 +4,8 @@ import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { database } from '../Firebase/firebaseSetup';
 
 const YELP_API_KEY = process.env.EXPO_PUBLIC_YELP_API_KEY;
 
@@ -14,6 +16,7 @@ function MapScreen() {
   const [region, setRegion] = useState(null);
   const [cafes, setCafes] = useState([]);
   const [isMapReady, setIsMapReady] = useState(false);
+  const [cafeRatings, setCafeRatings] = useState({});
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -36,6 +39,30 @@ function MapScreen() {
       return `${Math.round(meters)}m`;
     }
     return `${(meters / 1000).toFixed(1)}km`;
+  };
+
+  const calculateCombinedRating = (yelpRating, localReviews) => {
+    if (localReviews.length === 0) return yelpRating;
+    
+    const localTotal = localReviews.reduce((sum, review) => sum + review.rating, 0);
+    const avgLocalRating = localTotal / localReviews.length;
+    return (yelpRating + avgLocalRating) / 2;
+  };
+
+  const fetchLocalReviews = async (cafeId) => {
+    try {
+      const reviewsRef = collection(database, 'reviews');
+      const q = query(reviewsRef, where('cafeId', '==', cafeId));
+      const querySnapshot = await getDocs(q);
+      const reviews = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      return reviews;
+    } catch (error) {
+      console.error('Error fetching local reviews:', error);
+      return [];
+    }
   };
 
   useEffect(() => {
@@ -132,6 +159,19 @@ function MapScreen() {
       const data = await response.json();
       if (data.businesses && data.businesses.length > 0) {
         setCafes(data.businesses);
+        
+        const ratings = {};
+        await Promise.all(
+          data.businesses.map(async (cafe) => {
+            const localReviews = await fetchLocalReviews(cafe.id);
+            const combinedRating = calculateCombinedRating(cafe.rating, localReviews);
+            ratings[cafe.id] = {
+              rating: combinedRating,
+              totalReviews: cafe.review_count + localReviews.length
+            };
+          })
+        );
+        setCafeRatings(ratings);
       }
     } catch (error) {
       console.error('Error fetching cafes:', error);
@@ -160,6 +200,8 @@ function MapScreen() {
               cafe.coordinates.longitude
             ) : null;
 
+            const cafeRating = cafeRatings[cafe.id] || { rating: cafe.rating, totalReviews: cafe.review_count };
+
             return (
               <Marker
                 key={cafe.id}
@@ -179,7 +221,9 @@ function MapScreen() {
                     <Text style={styles.calloutTitle}>{cafe.name}</Text>
                     <Text style={styles.calloutAddress}>{cafe.location.address1}</Text>
                     <View style={styles.calloutInfo}>
-                      <Text style={styles.calloutRating}>★ {cafe.rating}</Text>
+                      <Text style={styles.calloutRating}>
+                        ★ {cafeRating.rating.toFixed(1)} ({cafeRating.totalReviews})
+                      </Text>
                       <Text style={styles.calloutDistance}>
                         {formatDistance(distance)}
                       </Text>
