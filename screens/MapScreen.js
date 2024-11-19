@@ -18,6 +18,7 @@ function MapScreen() {
   const [cafes, setCafes] = useState([]);
   const [isMapReady, setIsMapReady] = useState(false);
   const [cafeRatings, setCafeRatings] = useState({});
+  const [searchRadius, setSearchRadius] = useState(2000);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -143,7 +144,7 @@ function MapScreen() {
   const fetchNearbyCafes = async (coords) => {
     try {
       console.log('Fetching new cafes...');
-      const url = `https://api.yelp.com/v3/businesses/search?term=cafe&latitude=${coords.latitude}&longitude=${coords.longitude}&radius=2000&limit=20`;
+      const url = `https://api.yelp.com/v3/businesses/search?term=cafe&latitude=${coords.latitude}&longitude=${coords.longitude}&radius=${searchRadius}&limit=50`;
       
       const response = await fetch(url, {
         headers: {
@@ -159,11 +160,21 @@ function MapScreen() {
 
       const data = await response.json();
       if (data.businesses && data.businesses.length > 0) {
-        setCafes(data.businesses);
+        const filteredCafes = data.businesses.filter(cafe => {
+          const distance = calculateDistance(
+            coords.latitude,
+            coords.longitude,
+            cafe.coordinates.latitude,
+            cafe.coordinates.longitude
+          );
+          return distance <= searchRadius;
+        });
+        
+        setCafes(filteredCafes);
         
         const ratings = {};
         await Promise.all(
-          data.businesses.map(async (cafe) => {
+          filteredCafes.map(async (cafe) => {
             const localReviews = await fetchLocalReviews(cafe.id);
             const combinedRating = calculateCombinedRating(cafe.rating, localReviews);
             ratings[cafe.id] = {
@@ -186,6 +197,32 @@ function MapScreen() {
       await fetchNearbyCafes(location.coords);
     }
   };
+
+  const RadiusControl = () => (
+    <View style={styles.radiusControl}>
+      <TouchableOpacity 
+        style={styles.radiusButton}
+        onPress={() => {
+          const newRadius = Math.max(1000, searchRadius - 1000);
+          setSearchRadius(newRadius);
+          if (location) fetchNearbyCafes(location.coords);
+        }}
+      >
+        <Ionicons name="remove" size={24} color="white" />
+      </TouchableOpacity>
+      <Text style={styles.radiusText}>{(searchRadius / 1000).toFixed(1)}km</Text>
+      <TouchableOpacity 
+        style={styles.radiusButton}
+        onPress={() => {
+          const newRadius = Math.min(5000, searchRadius + 1000);
+          setSearchRadius(newRadius);
+          if (location) fetchNearbyCafes(location.coords);
+        }}
+      >
+        <Ionicons name="add" size={24} color="white" />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -244,15 +281,13 @@ function MapScreen() {
             })}
           </MapView>
 
+          <RadiusControl />
+
           <TouchableOpacity 
             style={styles.refreshButton}
             onPress={handleRefresh}
           >
-            <Ionicons 
-              name="refresh" 
-              size={24} 
-              color="white" 
-            />
+            <Ionicons name="refresh" size={24} color="white" />
           </TouchableOpacity>
         </>
       )}
@@ -316,6 +351,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  radiusControl: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 5,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  radiusButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radiusText: {
+    color: 'white',
+    marginHorizontal: 10,
+    fontWeight: 'bold',
   },
 });
 

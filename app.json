@@ -34,7 +34,7 @@
           [
             "expo-location",
             {
-              "locationPermission": "Allow SipSpotter to access your location"
+              "locationAlwaysAndWhenInUsePermission": "Allow SipSpotter to use your location."
             }
           ]
         ]
