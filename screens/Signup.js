@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import { auth } from '../Firebase/firebaseSetup'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import Colors from '../constants/Colors';
@@ -94,8 +94,14 @@ export default function Signup({ navigation }) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         <View style={styles.formContainer}>
-          <Text style={styles.header}>Create Account</Text>
-          <Text style={styles.subHeader}>Join our coffee-loving community</Text>
+          <View style={styles.logoSection}>
+            <Image 
+              source={require('../assets/Logo.png')} 
+              style={styles.logo}
+            />
+            <Text style={styles.header}>Create Account</Text>
+            <Text style={styles.subHeader}>Join our coffee-loving community</Text>
+          </View>
           
           <TextInput
             placeholder="Email Address"
@@ -154,6 +160,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  logo: {
+    width: 200,
+    height: 200,
+    marginBottom: 2,
+    resizeMode: 'contain',
   },
   formContainer: {
     flex: 1,

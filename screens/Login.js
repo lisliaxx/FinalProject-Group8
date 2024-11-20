@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import { auth } from '../Firebase/firebaseSetup'; 
 import { signInWithEmailAndPassword } from 'firebase/auth'; 
 import Colors from '../constants/Colors';
@@ -31,44 +31,50 @@ export default function Login({ navigation }) {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         <View style={styles.formContainer}>
-        <Text style={styles.header}>Welcome Back</Text>
-        <Text style={styles.subHeader}>Login to find your perfect cafe</Text>
-        
-        <TextInput
-          placeholder="Email Address"
-          value={email}
-          onChangeText={(text) => setEmail(text)}
-          style={styles.input}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor={Colors.textSecondary}
-        />
-        <TextInput
-          placeholder="Password"
-          value={password}
-          onChangeText={(text) => setPassword(text)}
-          style={styles.input}
-          secureTextEntry
-          placeholderTextColor={Colors.textSecondary}
-        />
-        
-        <TouchableOpacity 
-          style={styles.loginButton}
-          onPress={handleLogin}
-        >
-          <Text style={styles.loginButtonText}>Log In</Text>
-        </TouchableOpacity>
+          <View style={styles.logoSection}>
+            <Image 
+              source={require('../assets/Logo.png')} 
+              style={styles.logo}
+            />
+            <Text style={styles.header}>Welcome Back</Text>
+            <Text style={styles.subHeader}>Login to find your perfect cafe</Text>
+          </View>
+          
+          <TextInput
+            placeholder="Email Address"
+            value={email}
+            onChangeText={(text) => setEmail(text)}
+            style={styles.input}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholderTextColor={Colors.textSecondary}
+          />
+          <TextInput
+            placeholder="Password"
+            value={password}
+            onChangeText={(text) => setPassword(text)}
+            style={styles.input}
+            secureTextEntry
+            placeholderTextColor={Colors.textSecondary}
+          />
+          
+          <TouchableOpacity 
+            style={styles.loginButton}
+            onPress={handleLogin}
+          >
+            <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('Signup')}
-        >
-          <Text style={styles.switchText}>
-            New User? <Text style={styles.switchTextHighlight}>Create an account</Text>
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Signup')}
+          >
+            <Text style={styles.switchText}>
+              New User? <Text style={styles.switchTextHighlight}>Create an account</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  </TouchableWithoutFeedback>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -136,5 +142,15 @@ const styles = StyleSheet.create({
   switchTextHighlight: {
     color: Colors.primary,
     fontWeight: '600',
+  },
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  logo: {
+    width: 200,
+    height: 200,
+    marginBottom: 2,
+    resizeMode: 'contain',
   },
 });
