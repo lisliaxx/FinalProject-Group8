@@ -276,7 +276,7 @@ const CafeDetailsScreen = ({ route, navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Address</Text>
           <Text style={styles.sectionContent}>
-            {cafe.location.address1}
+            {cafe.location.address1 || 'Address not available'}
             {cafe.location.address2 ? `\n${cafe.location.address2}` : ''}
             {`\n${cafe.location.city}, ${cafe.location.state} ${cafe.location.zip_code}`}
           </Text>
