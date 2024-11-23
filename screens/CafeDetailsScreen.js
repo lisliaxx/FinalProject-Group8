@@ -88,16 +88,23 @@ const CafeDetailsScreen = ({ route, navigation }) => {
     useEffect(() => {
       const fetchCafeDetails = async () => {
         try {
+          const API_KEY = process.env.EXPO_PUBLIC_YELP_API_KEY?.trim(); // Remove any leading/trailing spaces or extra characters
+          if (!API_KEY) {
+            console.error('Missing Yelp API Key');
+            return;
+          }
+
           const response = await fetch(
             `https://api.yelp.com/v3/businesses/${cafeId}`,
             {
               headers: {
-                Authorization: `Bearer ${process.env.EXPO_PUBLIC_YELP_API_KEY}`,
+                Authorization: `Bearer ${API_KEY}`,
                 'Content-Type': 'application/json',
               },
             }
           );
           const data = await response.json();
+          console.log('Yelp API Response:', data); // Debug log
           setCafeDetails(data);
           setYelpRating(data.rating || 0);
         } catch (error) {
@@ -266,16 +273,32 @@ const CafeDetailsScreen = ({ route, navigation }) => {
           />
         }
       >
-        {/* Cafe Info Section */}
-        <View style={styles.cafeInfo}>
-          {cafeDetails?.photos && cafeDetails.photos[0] && (
-            <Image 
-              source={{ uri: cafeDetails.photos[0] }}
-              style={styles.cafeImage}
-            />
-          )}
-          <Text style={styles.cafeName}>{cafe.name}</Text>
-          
+       {/* Cafe Info Section */}
+      <View style={styles.cafeInfo}>
+        {/* Display image_url */}
+        {cafeDetails?.image_url && (
+          <Image
+            source={{ uri: cafeDetails.image_url }}
+            style={styles.cafeImage}
+          />
+        )}
+        <Text style={styles.cafeName}>{cafeDetails?.name}</Text>
+
+        {/* Photos Carousel */}
+        {cafeDetails?.photos?.length > 0 && (
+          <View style={styles.cafePhotos}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {cafeDetails.photos.map((photo, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: photo }}
+                  style={styles.cafePhoto}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
           {/* Rating Section */}
           <View style={styles.ratingContainer}>
             <View style={styles.ratingStars}>
@@ -390,6 +413,16 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: Colors.white,
   },
+  cafePhotos: {
+    marginVertical: 16,
+  },
+  cafePhoto: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+
   cafeName: {
     fontSize: 24,
     fontWeight: 'bold',
