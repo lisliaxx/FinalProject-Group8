@@ -159,3 +159,9 @@ service firebase.storage {
 
 ### User Profile Screen
 <img src="assets/UserProfile.png" alt="Login" width="200" />
+
+## App Screenshots - Iteration 2
+
+### Map Screen
+<img src="assets/Map.png" alt="Login" width="200" />
+<img src="assets/Map banner.png" alt="Login" width="200" />
