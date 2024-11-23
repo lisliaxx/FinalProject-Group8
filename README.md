@@ -162,22 +162,15 @@ service firebase.storage {
 
 ## App Screenshots - Iteration 2
 
-### Map Screen 
-<img src="assets/2.Map.PNG" alt="Map" width="200" />
-<img src="assets/2.Map banner.PNG" alt="Map banner" width="200" />
-
 ### Signup Screen 
 <img src="assets/2.Signup.PNG" alt="Map" width="200" />
 
 ### Login Screen with Reset Password
 <img src="assets/2.Login with reset pw.PNG" alt="Map" width="200" />
 
-### Notification
-<img src="assets/2.Permission for notification.PNG" alt="Map" width="200" />
-<img src="assets/2.Notification.PNG" alt="Map" width="200" />
-
-### Permission for Camera
-<img src="assets/2.Permission for camera.PNG" alt="Map" width="200" />
+### Map Screen 
+<img src="assets/2.Map.PNG" alt="Map" width="200" />
+<img src="assets/2.Map banner.PNG" alt="Map banner" width="200" />
 
 ### Favorite List
 <img src="assets/2.Fav list.PNG" alt="Map" width="200" />
@@ -188,3 +181,10 @@ service firebase.storage {
 ### Cafe Detail with Data Fetch from Yelp
 <img src="assets/2.Cafe detail with Yelp.PNG" alt="Map" width="200" />
 <img src="assets/2.Cafe detail with Yelp2.PNG" alt="Map" width="200" />
+
+### Notification
+<img src="assets/2.Permission for notification.PNG" alt="Map" width="200" />
+<img src="assets/2.Notification.PNG" alt="Map" width="200" />
+
+### Permission for Camera
+<img src="assets/2.Permission for camera.PNG" alt="Map" width="200" />
