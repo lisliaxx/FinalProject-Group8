@@ -32,6 +32,7 @@ const AddReviewScreen = ({ navigation, route }) => {
 // Open the camera to take a photo
 
 const handleTakePhoto = async () => {
+  // Request camera permissions
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
   if (status !== 'granted') {
     Alert.alert(
@@ -42,11 +43,12 @@ const handleTakePhoto = async () => {
   }
 
   try {
+    // Launch the camera
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaType.Images, // Updated from deprecated MediaTypeOptions
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Correct property usage
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 1,
+      quality: 1, // Full quality
     });
 
     if (!result.canceled) {
@@ -56,7 +58,7 @@ const handleTakePhoto = async () => {
         [{ resize: { width: 800 } }], // Resize width to 800px
         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG } // Compress to 70% quality
       );
-      setImage(resizedImage.uri); // Set the URI of the resized/compressed image
+      setImage(resizedImage.uri); // Set the resized/compressed image URI
     }
   } catch (error) {
     console.error('Error taking photo:', error);
