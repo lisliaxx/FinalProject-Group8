@@ -30,7 +30,6 @@ const AddReviewScreen = ({ navigation, route }) => {
   const { cafeId, cafeName } = route.params;
   
 // Open the camera to take a photo
-
 const handleTakePhoto = async () => {
   // Request camera permissions
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -45,7 +44,7 @@ const handleTakePhoto = async () => {
   try {
     // Launch the camera
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images, // Correct property usage
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1, // Full quality
