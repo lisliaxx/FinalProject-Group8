@@ -166,6 +166,8 @@ service firebase.storage {
 <img src="assets/2.Map.PNG" alt="Map" width="200" />
 <img src="assets/2.Map banner.PNG" alt="Map banner" width="200" />
 
-### 2.Signup Screen 
+### Signup Screen 
 <img src="assets/2.Signup.PNG" alt="Map" width="200" />
 
+### Login Screen with Reset Password
+<img src="assets/2.Login with reset pw.PNG" alt="Map" width="200" />
