@@ -10,6 +10,7 @@ This project is a mobile application that enables users to explore cafes, submit
 - Map: Users can find cafes around them based on their location.
 - Yelp API: Users can view ratings, cafe addresses, phone numbers, and hours of operation.
 - Reviews: Users can submit, view, edit, and delete reviews for cafes they created. They can view other users' reviews but cannot edit or delete them.
+- Sort and Search functionality: reviews are sorted and can be search in cafe detail screen.
 - Camera: Users can take multiple pictures using the device camera to add them to their reviews within the app.
 - Schedules/Notification: Users can schedule and view visits to cafes. Notifications remind users of their scheduled visits.
 - Favorite Cafes: Users can add cafes to their list of favorites and view them on the favorites screen.
@@ -22,7 +23,7 @@ To ensure optimal performance and compatibility with the latest features, the pr
 
 Firebase is configured for:
 
-- Authentication: For handling user login, registration, and session management.
+- Authentication: For handling user login, registration, password reset and session management.
 - Firestore Database: For storing and managing data related to user profiles, reviews, schedules and favorite cafes.
 
 ## Firebase collections:
