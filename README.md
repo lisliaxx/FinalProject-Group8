@@ -172,8 +172,18 @@ service firebase.storage {
 ### Login Screen with Reset Password
 <img src="assets/2.Login with reset pw.PNG" alt="Map" width="200" />
 
-### Permission for notification
+### Permission for Notification
 <img src="assets/2.Permission for notification.PNG" alt="Map" width="200" />
 
-### 2.Permission for camera
+### Permission for Camera
 <img src="assets/2.Permission for camera.PNG" alt="Map" width="200" />
+
+### Favorite List
+<img src="assets/2.Fav list.PNG" alt="Map" width="200" />
+
+### Search Function
+<img src="assets/2.Search.PNG" alt="Map" width="200" />
+
+### Cafe Detail with Data Fetch from Yelp
+<img src="assets/2.Cafe detail with Yelp.PNG" alt="Map" width="200" />
+<img src="assets/2.Cafe detail with Yelp2.PNG" alt="Map" width="200" />
