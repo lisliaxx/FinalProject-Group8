@@ -10,20 +10,12 @@ export default function Login({ navigation }) {
 
   const handleLogin = async () => {
     try {
-      // Firebase function to sign in with email and password
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       console.log('User logged in:', user);
-
-      Alert.alert('Success', 'Logged in successfully!');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
-
     } catch (error) {
       console.error('Error during login:', error);
-      Alert.alert('Login Error', error.message); // Display error message
+      Alert.alert('Login Error', error.message);
     }
   };
 

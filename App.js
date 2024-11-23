@@ -147,55 +147,42 @@ const TabNavigator = () => {
   );
 };
 
+const RootStack = createStackNavigator();
 
-// Defines the stack navigator for authentication screens
-const AuthStackNavigator = () => (
-  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-    <AuthStack.Screen name="Login" component={Login} />
-    <AuthStack.Screen name="Signup" component={Signup} />
-  </AuthStack.Navigator>
-);
-
-// Wraps the TabNavigator in a stack navigator to manage screen transitions and conditional navigation
-const MainStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="MainTabs" component={TabNavigator} />
-  </Stack.Navigator>
-);
-
-// Main entry point of the application
 const App = () => {
-  // State to keep track of user authentication status
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Listen for authentication changes (e.g., user logging in or out)
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // Set isAuthenticated to true if user is logged in, false otherwise
       setIsAuthenticated(!!user);
     });
     return unsubscribe;
   }, []);
 
-const styles = StyleSheet.create({
-  headerButton: {
-    marginRight: 16,
-    padding: 8,
-  },
-});
-
-return (
-  <GestureHandlerRootView style={{ flex: 1 }}>
-    <ScheduleProvider>
-      <FavoritesProvider>
-        <ReviewProvider>
-          <NavigationContainer>
-            {isAuthenticated ? <MainStack /> : <AuthStackNavigator />}
-          </NavigationContainer>
-        </ReviewProvider>
-      </FavoritesProvider>
-    </ScheduleProvider>
-  </GestureHandlerRootView>
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ScheduleProvider>
+        <FavoritesProvider>
+          <ReviewProvider>
+            <NavigationContainer>
+              <RootStack.Navigator screenOptions={{ headerShown: false }}>
+                {!isAuthenticated ? (
+                  // Auth screens
+                  <>
+                    <RootStack.Screen name="Login" component={Login} />
+                    <RootStack.Screen name="Signup" component={Signup} />
+                  </>
+                ) : (
+                  // Main app screens
+                  <RootStack.Screen name="MainTabs" component={TabNavigator} />
+                )}
+              </RootStack.Navigator>
+            </NavigationContainer>
+          </ReviewProvider>
+        </FavoritesProvider>
+      </ScheduleProvider>
+    </GestureHandlerRootView>
   );
 };
+
 export default App;
