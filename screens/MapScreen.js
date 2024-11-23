@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, TouchableOpacity, Platform } from 'react-native';
 import MapView, { Marker, Callout } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
@@ -224,6 +224,64 @@ function MapScreen() {
     </View>
   );
 
+  const renderMarker = (cafe) => {
+    const distance = location ? calculateDistance(
+      location.coords.latitude,
+      location.coords.longitude,
+      cafe.coordinates.latitude,
+      cafe.coordinates.longitude
+    ) : null;
+
+    const cafeRating = cafeRatings[cafe.id] || { rating: cafe.rating, totalReviews: cafe.review_count };
+
+    if (Platform.OS === 'ios') {
+      return (
+        <Marker
+          key={cafe.id}
+          coordinate={{
+            latitude: cafe.coordinates.latitude,
+            longitude: cafe.coordinates.longitude,
+          }}
+          image={require('../assets/CafeMarker.png')}
+        >
+          <Callout
+            onPress={() => {
+              navigation.navigate('CafeDetails', { cafe });
+            }}
+          >
+            <View style={styles.calloutContainer}>
+              <Text style={styles.calloutTitle}>{cafe.name}</Text>
+              <Text style={styles.calloutAddress}>{cafe.location.address1}</Text>
+              <View style={styles.calloutInfo}>
+                <Text style={styles.calloutRating}>
+                  ★ {cafeRating.rating.toFixed(1)} ({cafeRating.totalReviews})
+                </Text>
+                <Text style={styles.calloutDistance}>
+                  {formatDistance(distance)}
+                </Text>
+              </View>
+            </View>
+          </Callout>
+        </Marker>
+      );
+    } else {
+      // Android version - direct navigation on marker press
+      return (
+        <Marker
+          key={cafe.id}
+          coordinate={{
+            latitude: cafe.coordinates.latitude,
+            longitude: cafe.coordinates.longitude,
+          }}
+          image={require('../assets/CafeMarker.png')}
+          onPress={() => {
+            navigation.navigate('CafeDetails', { cafe });
+          }}
+        />
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
       {region && (
@@ -238,47 +296,7 @@ function MapScreen() {
               setIsMapReady(true);
             }}
           >
-            {cafes.length > 0 && cafes.map((cafe) => {
-              const distance = location ? calculateDistance(
-                location.coords.latitude,
-                location.coords.longitude,
-                cafe.coordinates.latitude,
-                cafe.coordinates.longitude
-              ) : null;
-
-              const cafeRating = cafeRatings[cafe.id] || { rating: cafe.rating, totalReviews: cafe.review_count };
-
-              return (
-                <Marker
-                  key={cafe.id}
-                  coordinate={{
-                    latitude: cafe.coordinates.latitude,
-                    longitude: cafe.coordinates.longitude,
-                  }}
-                  image={require('../assets/CafeMarker.png')}
-                >
-                  <Callout
-                    onPress={() => {
-                      console.log('Navigating to details for:', cafe.name);
-                      navigation.navigate('CafeDetails', { cafe });
-                    }}
-                  >
-                    <View style={styles.calloutContainer}>
-                      <Text style={styles.calloutTitle}>{cafe.name}</Text>
-                      <Text style={styles.calloutAddress}>{cafe.location.address1}</Text>
-                      <View style={styles.calloutInfo}>
-                        <Text style={styles.calloutRating}>
-                          ★ {cafeRating.rating.toFixed(1)} ({cafeRating.totalReviews})
-                        </Text>
-                        <Text style={styles.calloutDistance}>
-                          {formatDistance(distance)}
-                        </Text>
-                      </View>
-                    </View>
-                  </Callout>
-                </Marker>
-              );
-            })}
+            {cafes.length > 0 && cafes.map(renderMarker)}
           </MapView>
 
           <RadiusControl />
@@ -308,6 +326,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 5,
     minWidth: 150,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+      },
+    }),
   },
   calloutTitle: {
     fontWeight: 'bold',
