@@ -70,9 +70,13 @@ Delete: Users can remove cafes from their favorites list.
 - Frontend features creation with unified color patterns and mock samples
 - Make necessary frontend adjustments based on backend database feedback
 - Debug and fix errors related to pull requests
+- Implement google map API to fetch user's current location
+- Implement Yelp API to fetch cafe store's detailed information
+- Adjust screens based on Yelp API
+- Adjust Map page UI to be more user friendly
 
 ### Mon-Shan Lin:
-- Setup firebase to storing data and user authentication
+- Setup firebase to store data and user authentication
 - Create login and signup screens to allow users to create new accounts or log in to existing ones
 - Validate user input (e.g., email format, password strength) 
 - Add logout on profile screen
