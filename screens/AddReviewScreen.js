@@ -64,40 +64,40 @@ const handleTakePhoto = async () => {
   }
 };
 
-  const handleSubmit = async () => {
-    if (!rating) {
-      Alert.alert('Error', 'Please select a rating');
-      return;
+const handleSubmit = async () => {
+  if (!rating) {
+    Alert.alert('Error', 'Please select a rating');
+    return;
+  }
+
+  setUploading(true);
+  try {
+    let photoUrl = null;
+    if (image) {
+      photoUrl = await uploadImage(image, `reviews/${auth.currentUser.uid}`);
     }
 
-    setUploading(true);
-    try {
-      let photoUrl = null;
-      if (image) {
-        photoUrl = await uploadImage(image, `reviews/${auth.currentUser.uid}`);
-      }
+    const newReview = {
+      userId: auth.currentUser.uid,
+      email: auth.currentUser?.email,
+      cafeId,
+      cafeName,
+      rating,
+      review: review.trim(),
+      photoUrl,
+      date: new Date().toISOString(),
+    };
 
-      const newReview = {
-        userId: auth.currentUser.uid,
-        email: auth.currentUser?.email,
-        cafeId,
-        cafeName,
-        rating,
-        review: review.trim(),
-        photoUrl,
-        date: new Date().toISOString(),
-      };
-
-      await addDoc(collection(database, 'reviews'), newReview);
-      Alert.alert('Success', `Your review for ${cafeName} has been posted!`);
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      Alert.alert('Error', 'Failed to submit review. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  };
+    await addDoc(collection(database, 'reviews'), newReview);
+    Alert.alert('Success', `Your review for ${cafeName} has been posted!`);
+    navigation.goBack();
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    Alert.alert('Error', error.message || 'Failed to submit review. Please try again.');
+  } finally {
+    setUploading(false);
+  }
+};
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
