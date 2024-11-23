@@ -79,11 +79,13 @@ Delete: Users can remove cafes from their favorites list.
 - Implement create, read, update and delete operations for the reviews collection
 - Implement create, read and delete operations for the schedules collection
 - Implement create, read and delete operations for the users collection
+- Implement camera with permission and validation
+- Add reset password by entering registered email, receiving a secure reset link via email, and following it to update password.
+- Fetch cafe photo from Yelp API.
 - Write README file
 
 ## Firebase Rules Setup
 Ensure your Firestore security rules support data protection and allow access only to authorized users:
-
 
 ```firestore
 service cloud.firestore {
