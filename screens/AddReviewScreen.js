@@ -18,7 +18,6 @@ import { useReviews } from '../context/ReviewContext';
 import { database, auth, storage } from '../Firebase/firebaseSetup'; 
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import ImagePickerComponent from '../components/ImagePickerComponent';
 import { uploadImage } from '../utils/imageUpload';
 
 const AddReviewScreen = ({ navigation, route }) => {
@@ -29,6 +28,33 @@ const AddReviewScreen = ({ navigation, route }) => {
 
   const { cafeId, cafeName } = route.params;
   
+// Open the camera to take a photo
+const handleTakePhoto = async () => {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert(
+      'Permission Denied',
+      'Camera permission is required to take photos.'
+    );
+    return;
+  }
+
+  try {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri); // Set the URI of the captured image
+    }
+  } catch (error) {
+    console.error('Error taking photo:', error);
+    Alert.alert('Error', 'Could not take photo. Please try again.');
+  }
+};
 
   const handleSubmit = async () => {
     if (!rating) {
@@ -101,15 +127,25 @@ const AddReviewScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Photo Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add Photo</Text>
-        <ImagePickerComponent
-          image={image}
-          onImagePick={setImage}
-          size={200}
-        />
-      </View>
+         {/* Photo Section */}
+         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Take Photo</Text>
+          <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
+            <Ionicons name="camera-outline" size={24} color={Colors.primary} />
+            <Text style={styles.photoButtonText}>Take Photo</Text>
+          </TouchableOpacity>
+          {image && (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: image }} style={styles.imagePreview} />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => setImage(null)}
+              >
+                <Ionicons name="close" size={24} color={Colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
       {/* Submit Button */}
       <TouchableOpacity
