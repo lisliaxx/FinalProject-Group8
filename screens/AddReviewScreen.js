@@ -19,6 +19,7 @@ import { database, auth, storage } from '../Firebase/firebaseSetup';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { uploadImage } from '../utils/imageUpload';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const AddReviewScreen = ({ navigation, route }) => {
   const [rating, setRating] = useState(0);
@@ -29,6 +30,7 @@ const AddReviewScreen = ({ navigation, route }) => {
   const { cafeId, cafeName } = route.params;
   
 // Open the camera to take a photo
+
 const handleTakePhoto = async () => {
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
   if (status !== 'granted') {
@@ -41,14 +43,20 @@ const handleTakePhoto = async () => {
 
   try {
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images, // Updated from deprecated MediaTypeOptions
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri); // Set the URI of the captured image
+      // Resize and compress the image
+      const resizedImage = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 800 } }], // Resize width to 800px
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG } // Compress to 70% quality
+      );
+      setImage(resizedImage.uri); // Set the URI of the resized/compressed image
     }
   } catch (error) {
     console.error('Error taking photo:', error);
