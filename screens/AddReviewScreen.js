@@ -14,33 +14,67 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '../constants/Colors';
 import * as ImagePicker from 'expo-image-picker';
-import { useReviews } from '../context/ReviewContext';
 import { database, auth, storage } from '../Firebase/firebaseSetup'; 
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import ImagePickerComponent from '../components/ImagePickerComponent';
 import { uploadImage } from '../utils/imageUpload';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const AddReviewScreen = ({ navigation, route }) => {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
 
   const { cafeId, cafeName } = route.params;
   
-
-  const handleSubmit = async () => {
-    if (!rating) {
-      Alert.alert('Error', 'Please select a rating');
+  const handleAddPhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Denied',
+        'Camera permission is required to take photos.'
+      );
       return;
     }
 
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const resizedImage = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 800 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        setImages((prevImages) => [...prevImages, resizedImage.uri]);
+      }
+    } catch (error) {
+      console.error('Error adding photo:', error);
+      Alert.alert('Error', 'Could not add photo. Please try again.');
+    }
+  };
+  
+  const handleRemovePhoto = (index) => {
+    setImages((prevImages) => prevImages.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async () => {
+    if (!rating || !review.trim()) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+  
     setUploading(true);
     try {
-      let photoUrl = null;
-      if (image) {
-        photoUrl = await uploadImage(image, `reviews/${auth.currentUser.uid}`);
+      const photoUrls = [];
+      for (const image of images) {
+        const url = await uploadImage(image, `reviews/${auth.currentUser.uid}`);
+        photoUrls.push(url);
       }
 
       const newReview = {
@@ -50,7 +84,7 @@ const AddReviewScreen = ({ navigation, route }) => {
         cafeName,
         rating,
         review: review.trim(),
-        photoUrl,
+        photoUrls,
         date: new Date().toISOString(),
       };
 
@@ -101,15 +135,31 @@ const AddReviewScreen = ({ navigation, route }) => {
         />
       </View>
 
-      {/* Photo Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add Photo</Text>
-        <ImagePickerComponent
-          image={image}
-          onImagePick={setImage}
-          size={200}
-        />
-      </View>
+       {/* Photo Section */}
+       <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Photos</Text>
+          <TouchableOpacity style={styles.photoButton} onPress={handleAddPhoto}>
+            <Ionicons name="camera-outline" size={24} color={Colors.primary} />
+            <Text style={styles.photoButtonText}>Add Photo</Text>
+          </TouchableOpacity>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.imageScroll}
+          >
+            {images.map((image, index) => (
+              <View key={index} style={styles.imageContainer}>
+                <Image source={{ uri: image }} style={styles.imagePreview} />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => handleRemovePhoto(index)}
+                >
+                  <Ionicons name="close" size={24} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
 
       {/* Submit Button */}
       <TouchableOpacity
@@ -177,21 +227,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  imagePreviewContainer: {
-    marginTop: 16,
-    position: 'relative',
+  imageScroll: { 
+    flexDirection: 'row', 
+    marginTop: 8 
   },
-  imagePreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: 8,
+  imageContainer: { 
+    marginRight: 12, 
+    position: 'relative' 
   },
-  removeImageButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: Colors.background,
-    borderRadius: 12,
+  imagePreview: { 
+    width: 120, 
+    height: 120, 
+    borderRadius: 8 
+  },
+  removeImageButton: { 
+    position: 'absolute', 
+    top: -10, 
+    right: -10 
   },
   submitButton: {
     backgroundColor: Colors.primary,

@@ -18,7 +18,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { storage, database, auth } from '../Firebase/firebaseSetup'; 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import ImagePickerComponent from './ImagePickerComponent';
 import { uploadImage } from '../utils/imageUpload';
 
 const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
@@ -42,20 +41,29 @@ const EditReviewModal = ({ isVisible, onClose, review, onSave }) => {
   }, [review]);
 
   const handleAddImage = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Denied',
+        'Camera permission is required to take photos.'
+      );
+      return;
+    }
+  
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.5,
+        quality: 0.7,
       });
-
+  
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setImages(prevImages => [...prevImages, result.assets[0].uri]);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo');
     }
   };
 

@@ -6,18 +6,22 @@ import { useReviews } from '../context/ReviewContext';
 import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
-import { database, auth, storage } from '../Firebase/firebaseSetup'; 
+import { database, auth } from '../Firebase/firebaseSetup'; 
 import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useFavorites } from '../context/FavoritesContext';
 
 const CafeDetailsScreen = ({ route, navigation }) => {
   const { getReviewsByCafeId, editReview, deleteReview } = useReviews();
+  const { toggleFavorite, isFavorite } = useFavorites();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
-  const [cafeReviews, setCafeReviews] = useState([]); 
-  const [averageRating, setAverageRating] = useState(0);
+  const [cafeReviews, setCafeReviews] = useState([]);
+  const [cafeDetails, setCafeDetails] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [yelpRating, setYelpRating] = useState(0);
+  const [combinedRating, setCombinedRating] = useState(0);
+  const [totalReviewCount, setTotalReviewCount] = useState(0);
 
   const cafe = route.params?.cafe;
   const cafeId = cafe?.id;
@@ -25,19 +29,34 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity 
-          style={styles.headerButton}
-          onPress={() => setShowScheduleModal(true)}
-        >
-          <Ionicons 
-            name="calendar-outline" 
-            size={24} 
-            color={Colors.textLight}
-          />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => {
+              console.log('Toggle favorite for:', cafe.name);
+              toggleFavorite(cafe);
+            }}
+          >
+            <Ionicons 
+              name={isFavorite(cafe.id) ? "heart" : "heart-outline"} 
+              size={24} 
+              color={isFavorite(cafe.id) ? Colors.error : Colors.textLight}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={() => setShowScheduleModal(true)}
+          >
+            <Ionicons 
+              name="calendar-outline" 
+              size={24} 
+              color={Colors.textLight}
+            />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, cafe, isFavorite]);
 
     useEffect(() => {
       const fetchReviews = async () => {
@@ -66,13 +85,55 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       fetchReviews();
     }, [cafeId]);
 
+    useEffect(() => {
+      const fetchCafeDetails = async () => {
+        try {
+          const API_KEY = process.env.EXPO_PUBLIC_YELP_API_KEY?.trim(); // Remove any leading/trailing spaces or extra characters
+          if (!API_KEY) {
+            console.error('Missing Yelp API Key');
+            return;
+          }
+
+          const response = await fetch(
+            `https://api.yelp.com/v3/businesses/${cafeId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          const data = await response.json();
+          console.log('Yelp API Response:', data); // Debug log
+          setCafeDetails(data);
+          setYelpRating(data.rating || 0);
+        } catch (error) {
+          console.error('Error fetching cafe details:', error);
+          Alert.alert('Error', 'Failed to load cafe details');
+        }
+      };
+  
+      if (cafeId) {
+        fetchCafeDetails();
+      }
+    }, [cafeId]);
+  
   useEffect(() => {
     if (cafeReviews.length > 0) {
-      const total = cafeReviews.reduce((sum, review) => sum + review.rating, 0);
-      const avg = total / cafeReviews.length;
-      setAverageRating(avg);
+      const localTotal = cafeReviews.reduce((sum, review) => sum + review.rating, 0);
+      const avgLocalRating = localTotal / cafeReviews.length;
+      
+      // Combined rating (50% Yelp, 50% local)
+      const combined = (yelpRating + avgLocalRating) / 2;
+      setCombinedRating(combined);
+      
+      // Combined review count (Yelp + local)
+      setTotalReviewCount(cafe.review_count + cafeReviews.length);
+    } else {
+      setCombinedRating(yelpRating);
+      setTotalReviewCount(cafe.review_count);
     }
-  }, [cafeReviews]);
+  }, [cafeReviews, yelpRating, cafe.review_count]);
 
   const handleEditReview = (review) => {
     if (auth.currentUser?.uid === review.userId) {
@@ -121,13 +182,27 @@ const CafeDetailsScreen = ({ route, navigation }) => {
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const cafeDoc = await getDoc(doc(database, 'cafes', cafe.id));
-      if (cafeDoc.exists()) {
-        setCafe({ id: cafeDoc.id, ...cafeDoc.data() });
-      }
+      // Fetch cafe details
+      const response = await fetch(
+        `https://api.yelp.com/v3/businesses/${cafeId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.EXPO_PUBLIC_YELP_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const data = await response.json();
+      setCafeDetails(data);
+      setYelpRating(data.rating || 0);
 
+      // Fetch reviews
       const reviewsRef = collection(database, 'reviews');
-      const q = query(reviewsRef, where('cafeId', '==', cafe.id), orderBy('date', 'desc'));
+      const q = query(
+        reviewsRef,
+        where('cafeId', '==', cafe.id),
+        orderBy('date', 'desc')
+      );
       const querySnapshot = await getDocs(q);
       const fetchedReviews = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -135,17 +210,55 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       }));
       setCafeReviews(fetchedReviews);
 
-      if (fetchedReviews.length > 0) {
-        const total = fetchedReviews.reduce((sum, review) => sum + review.rating, 0);
-        setAverageRating(total / fetchedReviews.length);
-      }
+      // Update total review count
+      setTotalReviewCount(data.review_count + fetchedReviews.length);
+
     } catch (error) {
       console.error('Error refreshing data:', error);
       Alert.alert('Error', 'Failed to refresh data');
     } finally {
       setRefreshing(false);
     }
-  }, [cafe?.id]);
+  }, [cafe?.id, cafeId]);
+
+  // Fetch Yelp details
+  useEffect(() => {
+    const fetchCafeDetails = async () => {
+      try {
+        const response = await fetch(
+          `https://api.yelp.com/v3/businesses/${cafeId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.EXPO_PUBLIC_YELP_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const data = await response.json();
+        setCafeDetails(data);
+        setYelpRating(data.rating || 0);
+      } catch (error) {
+        console.error('Error fetching cafe details:', error);
+        Alert.alert('Error', 'Failed to load cafe details');
+      }
+    };
+
+    if (cafeId) {
+      fetchCafeDetails();
+    }
+  }, [cafeId]);
+
+  const formatHours = (hours) => {
+    if (!hours || !hours.length) return 'Hours not available';
+    
+    const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    return hours[0].open.map(schedule => {
+      const day = daysOfWeek[schedule.day];
+      const start = schedule.start.replace(/(\d{2})(\d{2})/, '$1:$2');
+      const end = schedule.end.replace(/(\d{2})(\d{2})/, '$1:$2');
+      return `${day}: ${start} - ${end}`;
+    });
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -160,45 +273,78 @@ const CafeDetailsScreen = ({ route, navigation }) => {
           />
         }
       >
-        {/* Cafe Info Section */}
-        <View style={styles.cafeInfo}>
-          <Text style={styles.cafeName}>{cafe.name}</Text>
+       {/* Cafe Info Section */}
+      <View style={styles.cafeInfo}>
+        {/* Display image_url */}
+        {cafeDetails?.image_url && (
+          <Image
+            source={{ uri: cafeDetails.image_url }}
+            style={styles.cafeImage}
+          />
+        )}
+        <Text style={styles.cafeName}>{cafeDetails?.name}</Text>
+
+          {/* Rating Section */}
           <View style={styles.ratingContainer}>
-            <Text style={styles.ratingText}>★ {averageRating ? averageRating.toFixed(1) : 'N/A'}</Text>
-            <Text style={styles.reviewCount}>({cafeReviews.length} reviews)</Text>
+            <View style={styles.ratingStars}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Text
+                  key={star}
+                  style={[
+                    styles.star,
+                    star <= Math.round(combinedRating) ? styles.starFilled : styles.starEmpty
+                  ]}
+                >
+                  ★
+                </Text>
+              ))}
+            </View>
+            <Text style={styles.ratingText}>
+              {combinedRating.toFixed(1)} ({totalReviewCount} reviews)
+            </Text>
           </View>
         </View>
 
         {/* Address Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Address</Text>
-          <Text style={styles.sectionContent}>{cafe.address}</Text>
+          <Text style={styles.sectionContent}>
+            {cafe.location.address1 || 'Address not available'}
+            {cafe.location.address2 ? `\n${cafe.location.address2}` : ''}
+            {`\n${cafe.location.city}, ${cafe.location.state} ${cafe.location.zip_code}`}
+          </Text>
+          {cafe.phone && (
+            <Text style={styles.phoneNumber}>{cafe.phone}</Text>
+          )}
         </View>
 
         {/* Hours Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hours</Text>
-          <Text style={styles.sectionContent}>{cafe.hours}</Text>
+          {cafeDetails?.hours ? (
+            <View>
+              {formatHours(cafeDetails.hours).map((schedule, index) => (
+                <Text key={index} style={styles.hoursText}>{schedule}</Text>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.sectionContent}>Hours not available</Text>
+          )}
         </View>
 
-        {/* Features Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Features</Text>
-          <View style={styles.featuresContainer}>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>🐾 Pet Friendly</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>🅿️ Parking Available</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>♿️ Wheelchair Accessible</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureText}>📶 Free WiFi</Text>
+        {/* Categories Section */}
+        {cafe.categories && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Categories</Text>
+            <View style={styles.categoriesContainer}>
+              {cafe.categories.map((category, index) => (
+                <View key={index} style={styles.categoryItem}>
+                  <Text style={styles.categoryText}>{category.title}</Text>
+                </View>
+              ))}
             </View>
           </View>
-        </View>
+        )}
 
         {/* Reviews Section */}
         <View style={styles.section}>
@@ -252,6 +398,16 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: Colors.white,
   },
+  cafePhotos: {
+    marginVertical: 16,
+  },
+  cafePhoto: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+
   cafeName: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -259,17 +415,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   ratingContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 12,
+  },
+  ratingStars: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  star: {
+    fontSize: 24,
+    marginHorizontal: 2,
+  },
+  starFilled: {
+    color: Colors.rating,
+  },
+  starEmpty: {
+    color: Colors.textSecondary,
   },
   ratingText: {
-    fontSize: 18,
-    color: Colors.rating,
-    marginRight: 8,
-  },
-  reviewCount: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
+    marginTop: 4,
   },
   section: {
     backgroundColor: Colors.white,
@@ -279,7 +445,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: Colors.textDark,
     marginBottom: 8,
   },
   sectionContent: {
@@ -319,6 +485,52 @@ const styles = StyleSheet.create({
   addReviewText: {
     color: Colors.white,
     fontWeight: '500',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerButton: {
+    marginHorizontal: 8,
+    padding: 4,
+  },
+  cafeImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  priceText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 4,
+  },
+  phoneNumber: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    marginTop: 8,
+  },
+  hoursText: {
+    fontSize: 16,
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryItem: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  categoryText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
   },
 });
 
