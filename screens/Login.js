@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image } from 'react-native';
 import { auth } from '../Firebase/firebaseSetup'; 
-import { signInWithEmailAndPassword } from 'firebase/auth'; 
+import { signInWithEmailAndPassword, sendPasswordResetEmail  } from 'firebase/auth'; 
 import Colors from '../constants/Colors';
 
 export default function Login({ navigation }) {
@@ -24,6 +24,24 @@ export default function Login({ navigation }) {
     } catch (error) {
       console.error('Error during login:', error);
       Alert.alert('Login Error', error.message); // Display error message
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email to reset your password.');
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        'Password Reset',
+        'A password reset email has been sent. Please check your inbox.'
+      );
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      Alert.alert('Error', error.message);
     }
   };
 
@@ -63,6 +81,14 @@ export default function Login({ navigation }) {
             onPress={handleLogin}
           >
             <Text style={styles.loginButtonText}>Log In</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={handleForgotPassword}
+          >
+            <Text style={styles.forgotPasswordText}>
+              Forgot Password?
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -131,6 +157,13 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: Colors.white,
     fontSize: 18,
+    fontWeight: '600',
+  },
+  forgotPasswordText: {
+    marginTop: 16,
+    textAlign: 'center',
+    color: Colors.primary,
+    fontSize: 16,
     fontWeight: '600',
   },
   switchText: {
