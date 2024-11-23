@@ -16,7 +16,8 @@ const Colors = {
     // Text Colors
     textPrimary: '#1A1A1A',    
     textSecondary: '#4A4A4A',  
-    textLight: '#FFFFFF',      
+    textLight: '#FFFFFF',
+    textDark: '#b83030',      
 
     // Status Colors
     success: '#4CAF50',  
