@@ -284,21 +284,6 @@ const CafeDetailsScreen = ({ route, navigation }) => {
         )}
         <Text style={styles.cafeName}>{cafeDetails?.name}</Text>
 
-        {/* Photos Carousel */}
-        {cafeDetails?.photos?.length > 0 && (
-          <View style={styles.cafePhotos}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {cafeDetails.photos.map((photo, index) => (
-                <Image
-                  key={index}
-                  source={{ uri: photo }}
-                  style={styles.cafePhoto}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
           {/* Rating Section */}
           <View style={styles.ratingContainer}>
             <View style={styles.ratingStars}>
