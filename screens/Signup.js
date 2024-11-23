@@ -78,12 +78,6 @@ export default function Signup({ navigation }) {
       const user = userCredential.user;
       console.log('User registered:', user);
 
-      Alert.alert('Success', 'User registered successfully!');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
-
     } catch (error) {
       console.error('Error during signup:', error);
       Alert.alert('Signup Error', error.message); // Display error message
