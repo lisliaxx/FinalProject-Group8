@@ -6,9 +6,8 @@ import { useReviews } from '../context/ReviewContext';
 import ScheduleModal from '../components/ScheduleModal';
 import EditReviewModal from '../components/EditReviewModal';
 import ReviewItem from '../components/ReviewItem'; 
-import { database, auth, storage } from '../Firebase/firebaseSetup'; 
+import { database, auth } from '../Firebase/firebaseSetup'; 
 import { collection, query, where, getDocs, doc, deleteDoc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFavorites } from '../context/FavoritesContext';
 
@@ -86,6 +85,32 @@ const CafeDetailsScreen = ({ route, navigation }) => {
       fetchReviews();
     }, [cafeId]);
 
+    useEffect(() => {
+      const fetchCafeDetails = async () => {
+        try {
+          const response = await fetch(
+            `https://api.yelp.com/v3/businesses/${cafeId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.EXPO_PUBLIC_YELP_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          const data = await response.json();
+          setCafeDetails(data);
+          setYelpRating(data.rating || 0);
+        } catch (error) {
+          console.error('Error fetching cafe details:', error);
+          Alert.alert('Error', 'Failed to load cafe details');
+        }
+      };
+  
+      if (cafeId) {
+        fetchCafeDetails();
+      }
+    }, [cafeId]);
+  
   useEffect(() => {
     if (cafeReviews.length > 0) {
       const localTotal = cafeReviews.reduce((sum, review) => sum + review.rating, 0);
