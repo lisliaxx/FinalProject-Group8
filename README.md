@@ -162,6 +162,6 @@ service firebase.storage {
 
 ## App Screenshots - Iteration 2
 
-### Map Screen
+### Map Screen 
 <img src="assets/2.Map.PNG" alt="Map" width="200" />
 <img src="assets/2.Map banner.PNG" alt="Map banner" width="200" />
