@@ -171,3 +171,9 @@ service firebase.storage {
 
 ### Login Screen with Reset Password
 <img src="assets/2.Login with reset pw.PNG" alt="Map" width="200" />
+
+### Permission for notification
+<img src="assets/2.Permission for notification.PNG" alt="Map" width="200" />
+
+### 2.Permission for camera
+<img src="assets/2.Permission for camera.PNG" alt="Map" width="200" />
