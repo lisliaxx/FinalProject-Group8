@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, Tou
 import { auth } from '../Firebase/firebaseSetup'; 
 import { signInWithEmailAndPassword, sendPasswordResetEmail  } from 'firebase/auth'; 
 import Colors from '../constants/Colors';
+import { requestAppPermissions } from '../utils/permissionHelper';
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
@@ -13,6 +14,10 @@ export default function Login({ navigation }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       console.log('User logged in:', user);
+      
+      // Request permissions after successful login
+      await requestAppPermissions();
+      
     } catch (error) {
       console.error('Error during login:', error);
       Alert.alert('Login Error', error.message);

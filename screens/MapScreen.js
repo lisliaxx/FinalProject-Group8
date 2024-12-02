@@ -78,9 +78,9 @@ function MapScreen() {
   useEffect(() => {
     (async () => {
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
+        let { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted') {
-          setErrorMsg('Permission to access location was denied');
+          setErrorMsg('Location permission is required to show nearby cafes');
           return;
         }
 
@@ -284,7 +284,11 @@ function MapScreen() {
 
   return (
     <View style={styles.container}>
-      {region && (
+      {errorMsg ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{errorMsg}</Text>
+        </View>
+      ) : (
         <>
           <MapView
             style={styles.map}
@@ -406,6 +410,21 @@ const styles = StyleSheet.create({
     color: 'white',
     marginHorizontal: 10,
     fontWeight: 'bold',
+  },
+  errorContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
   },
 });
 
