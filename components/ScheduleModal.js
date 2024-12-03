@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Ionicons } from '@expo/vector-icons';
@@ -26,15 +27,17 @@ const ScheduleModal = ({ visible, onClose, cafe }) => {
 
   const handleSchedule = async () => {
     if (date <= new Date()) {
-      alert('Please select a future date and time.');
+      Alert.alert('Invalid Date', 'Please select a future date and time.');
       return;
     }
 
-    if (await addSchedule(cafe.id, cafe.name, date)) {
-      alert('Visit scheduled! You will receive a reminder notification.');
+    const success = await addSchedule(cafe.id, cafe.name, date);
+    if (success) {
+      Alert.alert('Success', 'Visit scheduled! You will receive a reminder notification.');
       onClose();
     } else {
-      alert('Failed to schedule visit. Please try again.');
+      // The error message will be shown by the permission request if needed
+      // No need for additional alert here
     }
   };
 

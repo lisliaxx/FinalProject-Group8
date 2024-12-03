@@ -2,7 +2,8 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import { collection, addDoc, getDocs, deleteDoc, doc, where, query } from 'firebase/firestore';
 import { auth, database } from '../Firebase/firebaseSetup';
-import {  Alert } from 'react-native';
+import { Alert } from 'react-native';
+import { requestNotificationPermission } from '../utils/permissionHelper';
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -17,17 +18,6 @@ const ScheduleContext = createContext();
 
 export const ScheduleProvider = ({ children }) => {
   const [schedules, setSchedules] = useState({});
-
-  // Request notification permissions
-  useEffect(() => {
-    async function requestPermissions() {
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Please enable notifications to receive visit reminders!');
-      }
-    }
-    requestPermissions();
-  }, []);
 
   const fetchSchedules = async (userId) => {
     try {
@@ -50,13 +40,17 @@ export const ScheduleProvider = ({ children }) => {
     const userId = auth.currentUser.uid;
     const trigger = new Date(date);
   
-    // Check if the selected date is in the future
     if (trigger <= new Date()) {
       Alert.alert('Invalid Date', 'Please select a future date and time for the visit.');
       return false;
     }
   
     try {
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        return false;
+      }
+
       const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Café Visit Reminder',

@@ -77,7 +77,7 @@ export default function Signup({ navigation }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       console.log('User registered:', user);
-
+      
     } catch (error) {
       console.error('Error during signup:', error);
       Alert.alert('Signup Error', error.message); // Display error message
