@@ -18,6 +18,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './Firebase/firebaseSetup';
 import Login from './screens/Login';
 import Signup from './screens/Signup';
+import PermissionsHandler from './utils/permissionHelper';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -147,7 +148,14 @@ const TabNavigator = () => {
   );
 };
 
-const RootStack = createStackNavigator();
+const AuthStackNavigator = () => {
+  return (
+    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+      <AuthStack.Screen name="Login" component={Login} />
+      <AuthStack.Screen name="Signup" component={Signup} />
+    </AuthStack.Navigator>
+  );
+};
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -165,18 +173,13 @@ const App = () => {
         <FavoritesProvider>
           <ReviewProvider>
             <NavigationContainer>
-              <RootStack.Navigator screenOptions={{ headerShown: false }}>
-                {!isAuthenticated ? (
-                  // Auth screens
-                  <>
-                    <RootStack.Screen name="Login" component={Login} />
-                    <RootStack.Screen name="Signup" component={Signup} />
-                  </>
-                ) : (
-                  // Main app screens
-                  <RootStack.Screen name="MainTabs" component={TabNavigator} />
-                )}
-              </RootStack.Navigator>
+              {!isAuthenticated ? (
+                <AuthStackNavigator />
+              ) : (
+                <PermissionsHandler>
+                  <TabNavigator />
+                </PermissionsHandler>
+              )}
             </NavigationContainer>
           </ReviewProvider>
         </FavoritesProvider>
