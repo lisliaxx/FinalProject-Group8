@@ -3,7 +3,6 @@ import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, Tou
 import { auth } from '../Firebase/firebaseSetup'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import Colors from '../constants/Colors';
-import { requestAppPermissions } from '../utils/permissionHelper';
 
 export default function Signup({ navigation }) {
   const [email, setEmail] = useState('');
@@ -79,8 +78,7 @@ export default function Signup({ navigation }) {
       const user = userCredential.user;
       console.log('User registered:', user);
       
-      // Request permissions after successful signup
-      await requestAppPermissions();
+      navigation.replace('MainApp');
       
     } catch (error) {
       console.error('Error during signup:', error);

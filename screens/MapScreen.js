@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { database } from '../Firebase/firebaseSetup';
 import { Ionicons } from '@expo/vector-icons';
+import { requestAppPermissions } from '../utils/permissionHelper';
 
 const YELP_API_KEY = process.env.EXPO_PUBLIC_YELP_API_KEY;
 
@@ -79,12 +80,20 @@ function MapScreen() {
     (async () => {
       try {
         let { status } = await Location.getForegroundPermissionsAsync();
+        
         if (status !== 'granted') {
-          setErrorMsg('Location permission is required to show nearby cafes');
-          return;
+          await requestAppPermissions();
+          const { status: newStatus } = await Location.getForegroundPermissionsAsync();
+          if (newStatus !== 'granted') {
+            setErrorMsg('Location permission is required to show nearby cafes');
+            return;
+          }
         }
 
-        let currentLocation = await Location.getCurrentPositionAsync({});
+        let currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced
+        });
+        
         console.log('Got location:', currentLocation.coords);
         setLocation(currentLocation);
         
@@ -98,7 +107,9 @@ function MapScreen() {
         setRegion(newRegion);
       } catch (error) {
         console.error('Location error:', error);
-        setErrorMsg('Error getting location');
+        if (error.code !== 'E_LOCATION_PERMISSION_DENIED') {
+          setErrorMsg('Error getting location. Please ensure location services are enabled.');
+        }
       }
     })();
   }, []);
