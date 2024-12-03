@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { View, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import Colors from '../constants/Colors';
+import { auth } from '../Firebase/firebaseSetup';
 
 export const PermissionsHandler = ({ children }) => {
   const [permissionsReady, setPermissionsReady] = useState(false);
@@ -33,24 +34,26 @@ export const PermissionsHandler = ({ children }) => {
         return;
       }
 
-      // Request Notification Permission
-      const notificationStatus = await Notifications.requestPermissionsAsync();
-      if (notificationStatus.status !== 'granted') {
-        Alert.alert(
-          'Notification Permission Required',
-          'Please enable notifications to receive visit reminders.',
-          [
-            {
-              text: 'Try Again',
-              onPress: requestPermissions
-            },
-            {
-              text: 'Continue Anyway',
-              onPress: () => setPermissionsReady(true)
-            }
-          ]
-        );
-        return;
+      // Only request notification permissions if user is authenticated
+      if (auth.currentUser) {
+        const notificationStatus = await Notifications.requestPermissionsAsync();
+        if (notificationStatus.status !== 'granted') {
+          Alert.alert(
+            'Notification Permission Required',
+            'Please enable notifications to receive visit reminders.',
+            [
+              {
+                text: 'Try Again',
+                onPress: requestPermissions
+              },
+              {
+                text: 'Continue Anyway',
+                onPress: () => setPermissionsReady(true)
+              }
+            ]
+          );
+          return;
+        }
       }
 
       setPermissionsReady(true);
@@ -92,22 +95,5 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
 });
-
-export const requestAppPermissions = async () => {
-  try {
-    const locationStatus = await Location.requestForegroundPermissionsAsync();
-    const notificationStatus = await Notifications.requestPermissionsAsync();
-    return {
-      location: locationStatus.status === 'granted',
-      notifications: notificationStatus.status === 'granted'
-    };
-  } catch (error) {
-    console.error('Error requesting permissions:', error);
-    return {
-      location: false,
-      notifications: false
-    };
-  }
-};
 
 export default PermissionsHandler; 
