@@ -3,18 +3,48 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { View, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import Colors from '../constants/Colors';
-import { auth } from '../Firebase/firebaseSetup';
+
+// Separate function to request notification permissions
+export const requestNotificationPermission = async () => {
+  try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    
+    if (existingStatus === 'granted') {
+      return true;
+    }
+
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Notification Permission Required',
+        'Please enable notifications in your device settings to receive visit reminders.',
+        [{ text: 'OK', style: 'default' }]
+      );
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error requesting notification permission:', error);
+    return false;
+  }
+};
 
 export const PermissionsHandler = ({ children }) => {
   const [permissionsReady, setPermissionsReady] = useState(false);
 
   useEffect(() => {
-    requestPermissions();
+    requestLocationPermission();
   }, []);
 
-  const requestPermissions = async () => {
+  const requestLocationPermission = async () => {
     try {
-      // Request Location Permission
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+      
+      if (existingStatus === 'granted') {
+        setPermissionsReady(true);
+        return;
+      }
+
       const locationStatus = await Location.requestForegroundPermissionsAsync();
       if (locationStatus.status !== 'granted') {
         Alert.alert(
@@ -23,7 +53,7 @@ export const PermissionsHandler = ({ children }) => {
           [
             {
               text: 'Try Again',
-              onPress: requestPermissions
+              onPress: requestLocationPermission
             },
             {
               text: 'Continue Anyway',
@@ -34,38 +64,16 @@ export const PermissionsHandler = ({ children }) => {
         return;
       }
 
-      // Only request notification permissions if user is authenticated
-      if (auth.currentUser) {
-        const notificationStatus = await Notifications.requestPermissionsAsync();
-        if (notificationStatus.status !== 'granted') {
-          Alert.alert(
-            'Notification Permission Required',
-            'Please enable notifications to receive visit reminders.',
-            [
-              {
-                text: 'Try Again',
-                onPress: requestPermissions
-              },
-              {
-                text: 'Continue Anyway',
-                onPress: () => setPermissionsReady(true)
-              }
-            ]
-          );
-          return;
-        }
-      }
-
       setPermissionsReady(true);
     } catch (error) {
-      console.error('Error requesting permissions:', error);
+      console.error('Error requesting location permission:', error);
       Alert.alert(
         'Error',
-        'Failed to request permissions. Please try again.',
+        'Failed to request location permission. Please try again.',
         [
           {
             text: 'Try Again',
-            onPress: requestPermissions
+            onPress: requestLocationPermission
           },
           {
             text: 'Continue Anyway',
