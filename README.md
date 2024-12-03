@@ -4,6 +4,9 @@
 ## Overview
 This project is a mobile application that enables users to explore cafes, submit reviews, schedule visits, and save favorite cafes. The application is built using React Native and integrates with Firebase for backend services such as authentication and Firestore for data management. The following document provides information about the data model, features, and functionality implemented within the app.
 
+## Video link
+https://drive.google.com/file/d/1e2p6sM7HqgdIQzLYETYm2dMU6nkoiUWU/view?usp=sharing
+
 ## Features
 
 - User Authentication: Users can register, log in, log out and reset password with email.
