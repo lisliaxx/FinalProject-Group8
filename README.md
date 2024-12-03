@@ -164,7 +164,7 @@ service firebase.storage {
 ### User Profile Screen
 <img src="assets/UserProfile.png" alt="Login" width="200" />
 
-## App Screenshots - Iteration 2
+## App Screenshots - Iteration 2 and 3
 
 ### Signup Screen 
 <img src="assets/2.Signup.PNG" alt="Map" width="200" />
